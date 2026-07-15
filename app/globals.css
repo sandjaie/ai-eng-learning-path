@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f2efe9;
+  --ink: #191919;
+  --muted: #55524a;
+  --card: #ffffff;
+  --on-color: #191919;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #161513;
+    --ink: #ece7dd;
+    --muted: #a8a294;
+    --card: #24221e;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #161513;
+  --ink: #ece7dd;
+  --muted: #a8a294;
+  --card: #24221e;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-on-color: var(--on-color);
+  --font-display: var(--font-bricolage);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.block-card {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.block-btn {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+  transition: box-shadow 0.05s, translate 0.05s;
+}
+.block-btn:active {
+  box-shadow: 0 0 0 var(--ink);
+  translate: 3px 3px;
+}
+
+.block-input {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  padding: 0.4rem 0.6rem;
+}
+.block-input:focus {
+  outline: 3px solid #4cc9f0;
+  outline-offset: 1px;
+}
+
+.sticker {
+  display: inline-block;
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 0.15rem 0.6rem;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-btn:active {
+    translate: none;
+  }
+}
