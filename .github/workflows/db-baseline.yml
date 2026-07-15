@@ -1,0 +1,34 @@
+name: DB baseline (mark migration applied)
+
+# One-time utility: if your database predates the migration pipeline (you
+# applied the schema by hand), run this once from the Actions tab so
+# `supabase db push` doesn't try to re-apply the initial migration.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Migration version to mark as applied
+        required: true
+        default: "20260715120000"
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Mark migration as applied
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          MIGRATION_VERSION: ${{ inputs.version }}
+        run: supabase migration repair --status applied "$MIGRATION_VERSION" --db-url "$SUPABASE_DB_URL"
+
+      - name: Show migration status
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: supabase migration list --db-url "$SUPABASE_DB_URL"

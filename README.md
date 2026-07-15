@@ -138,6 +138,10 @@ tell the CLI that migration is already applied, without re-running it:
 npx supabase migration repair --status applied 20260715120000 --db-url "$SUPABASE_DB_URL"
 ```
 
+Or, if your `SUPABASE_DB_URL` secret is already set in GitHub: run the
+**"DB baseline (mark migration applied)"** workflow from the repo's Actions
+tab — same command, no local credential needed.
+
 ## Deployment
 
 1. Push your fork to GitHub and import it into Vercel.
