@@ -44,3 +44,9 @@ next-env.d.ts
 # superpowers controller
 .superpowers/
 docs/superpowers/
+
+# personal agent config & vendored skills (see AGENTS.md for install commands)
+.mcp.json
+.agents/
+.claude/skills/
+skills-lock.json
