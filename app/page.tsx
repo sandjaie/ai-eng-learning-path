@@ -55,7 +55,9 @@ export default async function Dashboard() {
   const ends = allPhases.map((p) => p.target_end).filter(Boolean) as string[];
   const roadmapStart = starts.length ? [...starts].sort()[0] : null;
   const roadmapEnd = ends.length ? [...ends].sort().at(-1)! : null;
-  const sinceStart = roadmapStart ? Date.now() - new Date(roadmapStart).getTime() : null;
+  // Server Component: wall-clock progress for this request (not a client re-render).
+  const nowMs = new Date().getTime();
+  const sinceStart = roadmapStart ? nowMs - new Date(roadmapStart).getTime() : null;
   const monthNo = sinceStart !== null
     ? Math.max(1, Math.floor(sinceStart / (30.44 * 24 * 3600 * 1000)) + 1)
     : null;

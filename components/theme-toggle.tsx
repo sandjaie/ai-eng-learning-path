@@ -1,24 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-function effectiveTheme(): "light" | "dark" {
+function getTheme(): "light" | "dark" {
   const set = document.documentElement.dataset.theme;
   if (set === "light" || set === "dark") return set;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function subscribe(onChange: () => void) {
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener("change", onChange);
+  const obs = new MutationObserver(onChange);
+  obs.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
+  return () => {
+    mq.removeEventListener("change", onChange);
+    obs.disconnect();
+  };
+}
+
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark" | null>(null);
-  useEffect(() => setTheme(effectiveTheme()), []);
+  const theme = useSyncExternalStore(subscribe, getTheme, () => "light" as const);
 
   const toggle = () => {
-    const next = effectiveTheme() === "dark" ? "light" : "dark";
+    const next = getTheme() === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     try {
       localStorage.setItem("theme", next);
-    } catch {}
-    setTheme(next);
+    } catch {
+      /* ignore quota / private mode */
+    }
   };
 
   return (
@@ -29,7 +43,7 @@ export function ThemeToggle() {
       className="block-btn px-3 py-1.5 text-xs"
       aria-label="Toggle dark mode"
     >
-      {theme === null ? "◐" : theme === "dark" ? "☀" : "☾"}
+      {theme === "dark" ? "☀" : "☾"}
     </button>
   );
 }

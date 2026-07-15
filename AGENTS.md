@@ -12,10 +12,12 @@ Single-user, self-hosted learning tracker: Next.js 16 (App Router) + Supabase (P
 
 - `npm run dev` — dev server on :3000 (needs `.env.local`, see `.env.local.example`)
 - `npm run test` — vitest; single file: `npx vitest run lib/progress.test.ts`
-- `npx tsc --noEmit` — typecheck
-- Build without local env: `NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder npm run build`
+- `npm run typecheck` — `tsc --noEmit` (TypeScript 7 native `tsc`)
+- `npm run lint` — eslint
+- `npm run verify` — lint + typecheck + test (also runs via Husky on every commit)
+- `npm run verify:full` — verify + production build (CI / before risky pushes)
 
-Run all three (test, typecheck, build) before committing.
+Build without local env: `NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder npm run build`
 
 ## Architecture
 
@@ -33,7 +35,7 @@ Run all three (test, typecheck, build) before committing.
 ## Migrations & deploys
 
 - Schema changes: `npx supabase migration new <name>` → write SQL in `supabase/migrations/` → apply with `scripts/migrate.sh` (needs `SUPABASE_DB_URL`) or just push to main.
-- Pushing to main does NOT auto-deploy — `vercel.json` disables git-triggered builds deliberately. `.github/workflows/deploy.yml` runs tests → `supabase db push` → Vercel deploy hook, in that order. Do not "fix" either half; the ordering is the point.
+- Pushing to main does NOT auto-deploy — `vercel.json` disables git-triggered builds deliberately. `.github/workflows/deploy.yml` runs `npm run verify:full` → `supabase db push` → Vercel deploy hook, in that order. Do not "fix" either half; the ordering is the point.
 - CI gotcha: GitHub runners are IPv4-only. The `SUPABASE_DB_URL` secret must be the **session-pooler** connection string (`…pooler.supabase.com:5432`), never the direct `db.<ref>.supabase.co` host (IPv6-only — connections fail).
 - A database that predates the pipeline needs the one-time "DB baseline" workflow (Actions tab) so `db push` doesn't re-apply the initial migration.
 - `supabase/seed.sql` is a generic sample roadmap (9 phases / 296 items), idempotent, applied manually in the Supabase SQL editor — never via CI. Its `auth.users` email placeholder must be replaced before running.
