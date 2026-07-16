@@ -19,6 +19,18 @@ Single-user, self-hosted learning tracker: Next.js 16 (App Router) + Supabase (P
 
 Build without local env: `NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder npm run build`
 
+## Git workflow
+
+- **`main`** is the only long-lived branch (default, always deployable). Do not commit directly to it.
+- Work on short-lived branches:
+  - `feature/<short-name>` — new capability
+  - `fix/<short-name>` — bug fix
+  - `chore/<short-name>` — deps, tooling, docs, CI
+- Open a PR into `main`. Prefer **squash merge**. Delete the branch after merge.
+- Local gate: Husky runs `npm run verify` on every commit.
+- CI: `.github/workflows/ci.yml` runs `npm run verify:full` on PRs to `main` (and pushes to `feature/*` / `fix/*` / `chore/*`). No migrate/deploy there.
+- Deploy: merge to `main` triggers `.github/workflows/deploy.yml` (verify → migrate → Vercel).
+
 ## Architecture
 
 - Reads are server components; ALL writes go through server actions in `app/actions.ts` — there are no API routes. Every action ends by revalidating `/` and the affected `/phase/[id]`.
@@ -35,7 +47,7 @@ Build without local env: `NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.
 ## Migrations & deploys
 
 - Schema changes: `npx supabase migration new <name>` → write SQL in `supabase/migrations/` → apply with `scripts/migrate.sh` (needs `SUPABASE_DB_URL`) or just push to main.
-- Pushing to main does NOT auto-deploy — `vercel.json` disables git-triggered builds deliberately. `.github/workflows/deploy.yml` runs `npm run verify:full` → `supabase db push` → Vercel deploy hook, in that order. Do not "fix" either half; the ordering is the point.
+- `vercel.json` disables Vercel git-triggered builds; only `.github/workflows/deploy.yml` (on push to `main`) deploys: `npm run verify:full` → `supabase db push` → Vercel deploy hook, in that order. Do not "fix" either half; the ordering is the point.
 - CI gotcha: GitHub runners are IPv4-only. The `SUPABASE_DB_URL` secret must be the **session-pooler** connection string (`…pooler.supabase.com:5432`), never the direct `db.<ref>.supabase.co` host (IPv6-only — connections fail).
 - A database that predates the pipeline needs the one-time "DB baseline" workflow (Actions tab) so `db push` doesn't re-apply the initial migration.
 - `supabase/seed.sql` is a generic sample roadmap (9 phases / 296 items), idempotent, applied manually in the Supabase SQL editor — never via CI. Its `auth.users` email placeholder must be replaced before running.
