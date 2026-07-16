@@ -10,7 +10,8 @@ Single-user, self-hosted learning tracker: Next.js 16 (App Router) + Supabase (P
 
 ## Commands
 
-- `npm run dev` — dev server on :3000 (needs `.env.local`, see `.env.local.example`)
+- `./scripts/dev.sh` / `npm run dev:local` — start Colima (if needed) + local Supabase + Next on :3000; overrides URL/anon key from `supabase status` and enables `DEV_AUTO_LOGIN` defaults (`you@example.com` / `local-dev-password`). Prefer Colima over Docker Desktop.
+- `npm run dev` — Next only, using `.env.local` as written (use for cloud/Google testing)
 - `npm run test` — vitest; single file: `npx vitest run lib/progress.test.ts`
 - `npm run typecheck` — `tsc --noEmit` (TypeScript 7 native `tsc`)
 - `npm run lint` — eslint
@@ -19,11 +20,13 @@ Single-user, self-hosted learning tracker: Next.js 16 (App Router) + Supabase (P
 
 Build without local env: `NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder npm run build`
 
+Local auto-login: `lib/dev-auth.ts` + `app/auth/dev-login/route.ts`. Gated on `NODE_ENV === "development"` and `DEV_AUTO_LOGIN=true`. `supabase/seed.sql` creates the matching local Auth user on `supabase start`. Never enable `DEV_*` in Vercel.
+
 ## Architecture
 
 - Reads are server components; ALL writes go through server actions in `app/actions.ts` — there are no API routes. Every action ends by revalidating `/` and the affected `/phase/[id]`.
 - Data model (`lib/types.ts` mirrors the SQL): phases → sections → items, plus `time_logs` per phase. Progress and on-track status are always computed (`lib/progress.ts`), never stored.
-- Auth is three independent layers keyed on `ALLOWED_EMAIL`: `proxy.ts` (Next 16's middleware convention — the file and export are named `proxy`, not `middleware`), `app/auth/callback/route.ts` (rejects wrong Google accounts before the session sticks), and Postgres RLS (`owner_all` policies on `auth.uid()`). Changes to any layer must keep the other two intact.
+- Auth is three independent layers keyed on `ALLOWED_EMAIL`: `proxy.ts` (Next 16's middleware convention — the file and export are named `proxy`, not `middleware`), `app/auth/callback/route.ts` (rejects wrong Google accounts before the session sticks), and Postgres RLS (`owner_all` policies on `auth.uid()`). Changes to any layer must keep the other two intact. Locally, `proxy.ts` may send unauthenticated traffic to `/auth/dev-login` instead of `/login` when `DEV_AUTO_LOGIN` is on.
 - The Supabase clients (`lib/supabase/`) are untyped — no generated `Database` types yet — so the pages cast nested selects (`app/page.tsx`, `app/phase/[id]/page.tsx`). If you change the schema, update `lib/types.ts` by hand and re-check those casts.
 
 ## Blocks design system
@@ -38,7 +41,8 @@ Build without local env: `NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.
 - Pushing to main does NOT auto-deploy — `vercel.json` disables git-triggered builds deliberately. `.github/workflows/deploy.yml` runs `npm run verify:full` → `supabase db push` → Vercel deploy hook, in that order. Do not "fix" either half; the ordering is the point.
 - CI gotcha: GitHub runners are IPv4-only. The `SUPABASE_DB_URL` secret must be the **session-pooler** connection string (`…pooler.supabase.com:5432`), never the direct `db.<ref>.supabase.co` host (IPv6-only — connections fail).
 - A database that predates the pipeline needs the one-time "DB baseline" workflow (Actions tab) so `db push` doesn't re-apply the initial migration.
-- `supabase/seed.sql` is a generic sample roadmap (9 phases / 296 items), idempotent, applied manually in the Supabase SQL editor — never via CI. Its `auth.users` email placeholder must be replaced before running.
+- `supabase/seed.sql` is a generic sample roadmap (9 phases / 296 items), idempotent. Locally it runs on `supabase start` and may create template user `you@example.com` only. On cloud, apply manually in the SQL editor after Google sign-in (set `seed_email` to `ALLOWED_EMAIL`) — never via CI, and it will not create password users for non-template emails. Local Colima DB ≠ production DB.
+- `supabase/config.toml` keeps `[analytics] enabled = false` so Colima is not broken by the vector container’s `docker.sock` mount.
 
 ## Repo conventions
 
