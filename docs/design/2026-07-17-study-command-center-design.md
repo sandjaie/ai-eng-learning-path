@@ -2,6 +2,8 @@
 
 **Date:** 2026-07-17
 **Status:** Approved product direction; ready for implementation planning
+**Companion specification:**
+[AI Engineer curriculum and roadmap enrichment](./2026-07-17-ai-engineer-curriculum-design.md)
 
 ## Summary
 
