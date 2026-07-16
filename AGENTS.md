@@ -28,7 +28,7 @@ Build without local env: `NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.
   - `chore/<short-name>` — deps, tooling, docs, CI
 - Open a PR into `main`. Prefer **squash merge**. Delete the branch after merge.
 - Local gate: Husky runs `npm run verify` on every commit.
-- CI: `.github/workflows/ci.yml` runs `npm run verify:full` on PRs to `main` (and pushes to `feature/*` / `fix/*` / `chore/*`). No migrate/deploy there.
+- CI: `.github/workflows/ci.yml` runs `npm run verify:full` on PRs into `main`. No migrate/deploy there.
 - Deploy: merge to `main` triggers `.github/workflows/deploy.yml` (verify → migrate → Vercel).
 
 ## Architecture
