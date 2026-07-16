@@ -151,6 +151,10 @@ go to `/auth/dev-login` (no Google). `DEV_AUTO_LOGIN` only runs when
 Override defaults by exporting before the script
 (e.g. `ALLOWED_EMAIL=me@example.com ./scripts/dev.sh`).
 
+The script writes `.env.development.local` so local URL/keys win over any
+cloud values still sitting in `.env.local`. Keep `.env.local` for production
+credentials; you do not need to edit it for local runs.
+
 ### Local vs production (safety)
 
 | | Local (Colima) | Production (Vercel + hosted Supabase) |
