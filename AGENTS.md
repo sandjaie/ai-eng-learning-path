@@ -20,6 +20,19 @@ Single-user, self-hosted learning tracker: Next.js 16 (App Router) + Supabase (P
 
 Build without local env: `NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder npm run build`
 
+## Git workflow
+
+- **`main`** is the only long-lived branch (default, always deployable). Do not commit directly to it.
+- Work on short-lived branches:
+  - `feature/<short-name>` — new capability
+  - `fix/<short-name>` — bug fix
+  - `chore/<short-name>` — deps, tooling, docs, CI
+- Open a PR into `main`. Prefer **squash merge**. Delete the branch after merge.
+- Local gate: Husky runs `npm run verify` on every commit.
+- CI: `.github/workflows/ci.yml` runs `npm run verify:full` on PRs into `main`. No migrate/deploy there.
+- Deploy: merge to `main` triggers `.github/workflows/deploy.yml` (verify → migrate → Vercel).
+
+
 Local auto-login: `lib/dev-auth.ts` + `app/auth/dev-login/route.ts`. Gated on `NODE_ENV === "development"` and `DEV_AUTO_LOGIN=true`. `supabase/seed.sql` creates the matching local Auth user on `supabase start`. Never enable `DEV_*` in Vercel.
 
 ## Architecture
@@ -38,7 +51,7 @@ Local auto-login: `lib/dev-auth.ts` + `app/auth/dev-login/route.ts`. Gated on `N
 ## Migrations & deploys
 
 - Schema changes: `npx supabase migration new <name>` → write SQL in `supabase/migrations/` → apply with `scripts/migrate.sh` (needs `SUPABASE_DB_URL`) or just push to main.
-- Pushing to main does NOT auto-deploy — `vercel.json` disables git-triggered builds deliberately. `.github/workflows/deploy.yml` runs `npm run verify:full` → `supabase db push` → Vercel deploy hook, in that order. Do not "fix" either half; the ordering is the point.
+- `vercel.json` disables Vercel git-triggered builds; only `.github/workflows/deploy.yml` (on push to `main`) deploys: `npm run verify:full` → `supabase db push` → Vercel deploy hook, in that order. Do not "fix" either half; the ordering is the point.
 - CI gotcha: GitHub runners are IPv4-only. The `SUPABASE_DB_URL` secret must be the **session-pooler** connection string (`…pooler.supabase.com:5432`), never the direct `db.<ref>.supabase.co` host (IPv6-only — connections fail).
 - A database that predates the pipeline needs the one-time "DB baseline" workflow (Actions tab) so `db push` doesn't re-apply the initial migration.
 - `supabase/seed.sql` is a generic sample roadmap (9 phases / 296 items), idempotent. Locally it runs on `supabase start` and may create template user `you@example.com` only. On cloud, apply manually in the SQL editor after Google sign-in (set `seed_email` to `ALLOWED_EMAIL`) — never via CI, and it will not create password users for non-template emails. Local Colima DB ≠ production DB.
