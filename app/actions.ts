@@ -796,7 +796,7 @@ export async function duplicatePhase(id: string) {
       title, description, notes, sort_order, target_start, target_end,
       sections (
         title, sort_order, kind,
-        items (title, url, provider, status, notes, sort_order, kind, estimated_minutes)
+        items (id, title, url, provider, notes, sort_order, kind, estimated_minutes)
       )
     `)
     .eq("id", id)
@@ -825,11 +825,15 @@ export async function duplicatePhase(id: string) {
     .single();
   if (createError || !created) return { error: createError?.message ?? "Could not duplicate" };
 
+  const itemIdMap = new Map<string, string>();
+  const sourceItemIds: string[] = [];
+
   for (const section of (source.sections ?? []) as {
     title: string;
     sort_order: number;
     kind: string;
     items: {
+      id: string;
       title: string;
       url: string | null;
       provider: string | null;
@@ -851,20 +855,78 @@ export async function duplicatePhase(id: string) {
       .single();
     if (sError || !newSection) return { error: sError?.message ?? "Section copy failed" };
     for (const item of section.items ?? []) {
-      const { error: iError } = await supabase.from("items").insert({
-        section_id: newSection.id,
-        title: item.title,
-        url: item.url,
-        provider: item.provider,
-        notes: item.notes,
-        sort_order: item.sort_order,
-        kind: item.kind === "reference" ? "topic" : item.kind,
-        estimated_minutes: item.estimated_minutes,
-        status: "todo",
-        completed_at: null,
-      });
-      if (iError) return { error: iError.message };
+      sourceItemIds.push(item.id);
+      const { data: newItem, error: iError } = await supabase
+        .from("items")
+        .insert({
+          section_id: newSection.id,
+          title: item.title,
+          url: item.url,
+          provider: item.provider,
+          notes: item.notes,
+          sort_order: item.sort_order,
+          kind: item.kind === "reference" ? "topic" : item.kind,
+          estimated_minutes: item.estimated_minutes,
+          status: "todo",
+          completed_at: null,
+        })
+        .select("id")
+        .single();
+      if (iError || !newItem) return { error: iError?.message ?? "Item copy failed" };
+      itemIdMap.set(item.id, newItem.id as string);
     }
+  }
+
+  if (sourceItemIds.length > 0) {
+    const { data: criteria, error: criteriaError } = await supabase
+      .from("achievement_criteria")
+      .select("item_id, description, is_required, sort_order")
+      .eq("user_id", user.id)
+      .in("item_id", sourceItemIds);
+    if (criteriaError) return { error: criteriaError.message };
+    for (const c of criteria ?? []) {
+      const newItemId = itemIdMap.get(c.item_id as string);
+      if (!newItemId) continue;
+      const { error: cError } = await supabase.from("achievement_criteria").insert({
+        item_id: newItemId,
+        description: c.description,
+        is_required: c.is_required,
+        sort_order: c.sort_order,
+        achieved_at: null,
+      });
+      if (cError) return { error: cError.message };
+    }
+  }
+
+  const { data: resources, error: resourcesError } = await supabase
+    .from("resources")
+    .select(
+      "item_id, title, url, provider, resource_type, priority, estimated_minutes, description, notes, sort_order",
+    )
+    .eq("user_id", user.id)
+    .eq("phase_id", id);
+  if (resourcesError) return { error: resourcesError.message };
+  for (const r of resources ?? []) {
+    const mappedItemId = r.item_id
+      ? (itemIdMap.get(r.item_id as string) ?? null)
+      : null;
+    // Skip item-linked resources whose source item was not copied.
+    if (r.item_id && !mappedItemId) continue;
+    const { error: rError } = await supabase.from("resources").insert({
+      phase_id: created.id,
+      item_id: mappedItemId,
+      title: r.title,
+      url: r.url,
+      provider: r.provider,
+      resource_type: r.resource_type,
+      priority: r.priority,
+      status: "planned",
+      estimated_minutes: r.estimated_minutes,
+      description: r.description,
+      notes: r.notes,
+      sort_order: r.sort_order,
+    });
+    if (rError) return { error: rError.message };
   }
 
   refresh({ phaseId: created.id as string });
