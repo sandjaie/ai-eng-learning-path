@@ -210,6 +210,7 @@ export function PlanEditor({
                             <option value="topic">topic</option>
                             <option value="project_task">project_task</option>
                             <option value="milestone">milestone</option>
+                            <option value="reference">reference</option>
                           </select>
                         </label>
                         <label className="block text-xs font-bold">

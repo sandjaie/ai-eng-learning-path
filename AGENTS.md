@@ -20,6 +20,19 @@ Single-user, self-hosted learning tracker: Next.js 16 (App Router) + Supabase (P
 
 Build without local env: `NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder npm run build`
 
+## Git workflow
+
+- **`main`** is the only long-lived branch (default, always deployable). Do not commit directly to it.
+- Work on short-lived branches:
+  - `feature/<short-name>` — new capability
+  - `fix/<short-name>` — bug fix
+  - `chore/<short-name>` — deps, tooling, docs, CI
+- Open a PR into `main`. Prefer **squash merge**. Delete the branch after merge.
+- Local gate: Husky runs `npm run verify` on every commit.
+- CI: `.github/workflows/ci.yml` runs `npm run verify:full` on PRs into `main`. No migrate/deploy there.
+- Deploy: merge to `main` triggers `.github/workflows/deploy.yml` (verify → migrate → Vercel).
+
+
 Local auto-login: `lib/dev-auth.ts` + `app/auth/dev-login/route.ts`. Gated on `NODE_ENV === "development"` and `DEV_AUTO_LOGIN=true`. `supabase/seed.sql` creates the matching local Auth user on `supabase start`. Never enable `DEV_*` in Vercel.
 
 ## Architecture

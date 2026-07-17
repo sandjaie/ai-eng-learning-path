@@ -204,7 +204,7 @@ export async function updateItem(id: string, phaseId: string, formData: FormData
   let provider = orNull(str(formData, "provider"));
   if (!provider && url) provider = detectProvider(url);
   const kindRaw = str(formData, "kind");
-  const kind = (["topic", "project_task", "milestone"].includes(kindRaw)
+  const kind = (["topic", "project_task", "milestone", "reference"].includes(kindRaw)
     ? kindRaw
     : undefined) as ItemKind | undefined;
   const minutesRaw = str(formData, "estimated_minutes");
@@ -865,7 +865,7 @@ export async function duplicatePhase(id: string) {
           provider: item.provider,
           notes: item.notes,
           sort_order: item.sort_order,
-          kind: item.kind === "reference" ? "topic" : item.kind,
+          kind: item.kind,
           estimated_minutes: item.estimated_minutes,
           status: "todo",
           completed_at: null,

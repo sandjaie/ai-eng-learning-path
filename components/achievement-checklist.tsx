@@ -25,20 +25,9 @@ export function AchievementChecklist({
       <p className="text-xs font-bold tracking-wide text-muted uppercase">Achievement check</p>
       <h3 className="font-display mt-1 text-lg font-bold text-ink">You are done when you can…</h3>
       {criteria.length === 0 ? (
-        <div className="mt-4 space-y-3">
-          <p className="text-sm">
-            No required criteria — mark achieved when you can demonstrate the outcome.
-          </p>
-          {itemStatus !== "done" ? (
-            <form action={markItemAchievedAction.bind(null, itemId, phaseId)}>
-              <button type="submit" className="scc-btn scc-btn-secondary w-full">
-                Mark achieved
-              </button>
-            </form>
-          ) : (
-            <p className="text-sm font-bold">Achieved</p>
-          )}
-        </div>
+        <p className="mt-4 text-sm">
+          No required criteria — mark achieved when you can demonstrate the outcome.
+        </p>
       ) : (
         <ul className="mt-3 space-y-2">
           {criteria.map((c) => (
@@ -67,6 +56,18 @@ export function AchievementChecklist({
         <p className="mt-3 text-sm font-bold" aria-live="polite">
           Required outcomes met.
         </p>
+      ) : null}
+      {/* No required criteria (empty or optional-only): allow explicit completion. */}
+      {required.length === 0 ? (
+        itemStatus !== "done" ? (
+          <form action={markItemAchievedAction.bind(null, itemId, phaseId)} className="mt-4">
+            <button type="submit" className="scc-btn scc-btn-secondary w-full">
+              Mark achieved
+            </button>
+          </form>
+        ) : (
+          <p className="mt-4 text-sm font-bold">Achieved</p>
+        )
       ) : null}
       <form action={createCriterionAction.bind(null, itemId, phaseId)} className="mt-4 space-y-2">
         <label className="block text-xs font-bold">

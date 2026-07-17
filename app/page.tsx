@@ -2,12 +2,14 @@ import Link from "next/link";
 import { ActionError } from "@/components/action-error";
 import { AppShell } from "@/components/app-shell";
 import { CapturePanel } from "@/components/capture-panel";
+import { CurriculumUpgradeCard } from "@/components/curriculum-upgrade-card";
 import { PathBuilder } from "@/components/path-builder";
 import { PhaseNavigator } from "@/components/phase-navigator";
 import { ResourceList } from "@/components/resource-list";
 import { StudyNextCard } from "@/components/study-next-card";
 import { StudySessionPanel } from "@/components/study-session-panel";
 import { AchievementChecklist } from "@/components/achievement-checklist";
+import { isCurriculumFullyMaterialized } from "@/lib/curriculum/apply";
 import { activeDaysThisWeek, startOfWeekMonday, weeklyMinutes } from "@/lib/progress";
 import { loadPhasesWithTree, loadPreferences, requireUser } from "@/lib/queries";
 import { selectStudyNext } from "@/lib/study-next";
@@ -19,7 +21,7 @@ export default async function Dashboard({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
   const phases = await loadPhasesWithTree();
   const prefs = await loadPreferences();
 
@@ -31,6 +33,8 @@ export default async function Dashboard({
       </AppShell>
     );
   }
+
+  const curriculumComplete = await isCurriculumFullyMaterialized(supabase, user.id);
 
   const studyNext = selectStudyNext(phases, prefs?.pinned_item_id ?? null);
   const activePhase =
@@ -106,6 +110,7 @@ export default async function Dashboard({
       }
     >
       <ActionError message={error} />
+      <CurriculumUpgradeCard needsUpgrade={!curriculumComplete} />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-muted">
