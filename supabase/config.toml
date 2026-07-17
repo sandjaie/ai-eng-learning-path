@@ -1,1 +1,10 @@
 project_id = "ai-eng-learning-path"
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+# Required on Colima: the analytics/vector container tries to mount the host
+# docker.sock path, which Colima cannot bind-mount ("operation not supported").
+[analytics]
+enabled = false

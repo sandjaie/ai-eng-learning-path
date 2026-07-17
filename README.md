@@ -44,6 +44,10 @@ as a template and replace the content with your own roadmap.
 
 ## Run your own (fork guide)
 
+This section is for **hosted** Supabase + Google OAuth + Vercel. For daily
+coding against a local Docker stack (no Google), jump to
+[Local development](#local-development).
+
 1. **Fork this repo.**
 
 2. **Create a Supabase project** at [supabase.com](https://supabase.com).
@@ -51,7 +55,8 @@ as a template and replace the content with your own roadmap.
    provider (create a Google OAuth client in Google Cloud Console using the
    callback URL Supabase shows you). Under Authentication → URL
    Configuration, add redirect URLs for both `http://localhost:3000/auth/callback`
-   and your future production domain's `/auth/callback`.
+   (optional, only if you test Google from localhost) and your future
+   production domain's `/auth/callback`.
 
 3. **Set your allowed email.** This app enforces a single allowed user —
    copy `.env.local.example` to `.env.local` and set `ALLOWED_EMAIL` to
@@ -67,13 +72,14 @@ as a template and replace the content with your own roadmap.
    Supabase SQL editor and run it once.
 
 6. **Sign in to the app once** (`npm install && npm run dev`, then "Sign in with Google")
-   so `auth.users` has a row for your account — the seed script below looks
-   up that row by email.
+   so `auth.users` has a row for your account — or skip this if you will let
+   `seed.sql` create the template user (see below).
 
 7. **Seed your data.** Pick one:
-   - **(a) Use the sample roadmap.** Edit `supabase/seed.sql`, replacing
-     `you@example.com` in the `auth.users` lookup near the top with your own
-     email, then run the file in the Supabase SQL editor.
+   - **(a) Use the sample roadmap.** Sign in with Google once, set `seed_email`
+     near the top of `supabase/seed.sql` to your `ALLOWED_EMAIL`, then run the
+     file in the Supabase SQL editor. The seed will not create a password user
+     for that email — your Google account must already exist in `auth.users`.
    - **(b) Start empty.** Skip seeding entirely and build your phases,
      sections, and items directly in the UI.
    - **(c) Author your own `seed.sql`.** Follow the same pattern as the
@@ -107,11 +113,82 @@ as a template and replace the content with your own roadmap.
 
 ## Local development
 
-1. `cp .env.local.example .env.local` and fill in your Supabase project
-   URL, anon key, and `ALLOWED_EMAIL`.
-2. `npm install && npm run dev` → http://localhost:3000
-3. `npm run test` runs the unit test suite (`lib/progress.ts`,
-   `lib/provider.ts`).
+Local work uses a **Dockerized Supabase stack** on your machine (Postgres +
+Auth + Studio). It does **not** need your cloud project or Google OAuth.
+Production still uses hosted Supabase + Google — see the fork guide above.
+
+### Prerequisites (one-time)
+
+- [Colima](https://github.com/abiosoft/colima) + Docker CLI: `brew install colima docker`
+- Node.js + npm
+
+Docker Desktop is not required.
+
+### Start the stack
+
+```bash
+npm install   # first time only
+./scripts/dev.sh
+# or: npm run dev:local
+```
+
+That single command starts everything that is not already up:
+
+1. Colima (if stopped) and the Colima Docker context / socket
+2. Local Supabase (`npx supabase start` — pulls images on first run; Auth,
+   Postgres, Kong, Studio, etc., because the app uses Supabase Auth + RLS).
+   Analytics is disabled in `supabase/config.toml` so Colima is not broken by
+   the vector/`docker.sock` mount.
+3. Migrations + `supabase/seed.sql` (local user `you@example.com` /
+   `local-dev-password` and the sample roadmap)
+4. Next.js on http://localhost:3000, pointed at the local API, with
+   `DEV_AUTO_LOGIN` enabled
+
+No separate `colima start` / `docker context` steps. Unauthenticated visits
+go to `/auth/dev-login` (no Google). `DEV_AUTO_LOGIN` only runs when
+`NODE_ENV === "development"`.
+
+Override defaults by exporting before the script
+(e.g. `ALLOWED_EMAIL=me@example.com ./scripts/dev.sh`).
+
+The script writes `.env.development.local` so local URL/keys win over any
+cloud values still sitting in `.env.local`. Keep `.env.local` for production
+credentials; you do not need to edit it for local runs.
+
+### Local vs production (safety)
+
+| | Local (Colima) | Production (Vercel + hosted Supabase) |
+|---|---|---|
+| Database | Separate Docker Postgres | Hosted Supabase project |
+| Auth | Email/password via seed + `DEV_AUTO_LOGIN` | Google OAuth + `ALLOWED_EMAIL` |
+| Seed | Auto on `supabase start` | **Never** run by CI — manual SQL editor only |
+| Deploy | — | Code + **migrations** only (`db push`) |
+
+Local work cannot alter production Auth or data: different database, and
+`DEV_*` is ignored when `NODE_ENV !== "development"`. Do not put `DEV_*` in
+Vercel.
+
+One `supabase/seed.sql` serves both environments. It only auto-creates the
+template user `you@example.com`. For cloud, set `seed_email` to your real
+`ALLOWED_EMAIL`, sign in with Google once, then run the seed — it will not
+create a password user for that email.
+
+**Important:** rows you add in the local UI live only in local Postgres. Deploy
+does not copy that data. Ship schema via migrations; re-run or adapt `seed.sql`
+on cloud if you want the sample roadmap there, or rebuild content in the UI.
+
+### Other useful commands
+
+| Command | Purpose |
+|---|---|
+| `./scripts/dev.sh` | Start Colima + Supabase + Next (usual path) |
+| `npx supabase stop` | Stop local Supabase containers (Colima keeps running) |
+| `colima stop` | Stop the Colima VM entirely |
+| `npx supabase status` | Show local URLs and keys |
+| `npm run test` | Unit tests (`lib/progress.ts`, `lib/provider.ts`) |
+
+Use `.env.local` with your **cloud** URL/keys only when you intentionally want
+to exercise production Google auth from localhost (`npm run dev`).
 
 ## Database migrations
 
@@ -177,18 +254,19 @@ tab — same command, no local credential needed.
 - **Routes** (`app/`): `/` — dashboard (`app/page.tsx`); `/phase/[id]` —
   phase detail with sections, items, notes, and time log
   (`app/phase/[id]/page.tsx`); `/login` — sign-in page; `/auth/callback`
-  and `/auth/signout` — OAuth callback and sign-out route handlers.
+  and `/auth/signout` — OAuth callback and sign-out; `/auth/dev-login` —
+  development-only password auto-login (see [Local development](#local-development)).
 - **Mutations** all go through Next.js Server Actions in `app/actions.ts` —
   there is no separate API layer; forms and buttons call these functions
   directly.
-- **Security model**: Google sign-in via Supabase Auth. `proxy.ts` (Next.js
-  16's middleware convention) redirects unauthenticated requests to
-  `/login`, and signs out any authenticated user whose email isn't
-  `ALLOWED_EMAIL`. `app/auth/callback/route.ts` enforces the same allowlist
-  check on the OAuth callback itself. Underneath both checks, every table
-  (`phases`, `sections`, `items`, `time_logs`) has row-level security
-  scoped to `auth.uid()` (`supabase/migrations/20260715120000_initial_schema.sql`),
-  so data stays isolated even if an app-layer check were ever bypassed.
+- **Security model**: Production uses Google sign-in via Supabase Auth.
+  `proxy.ts` (Next.js 16's middleware convention) redirects unauthenticated
+  requests to `/login` (or `/auth/dev-login` when local auto-login is on),
+  and signs out any authenticated user whose email isn't `ALLOWED_EMAIL`.
+  `app/auth/callback/route.ts` enforces the same allowlist on the OAuth
+  callback. Underneath, every table (`phases`, `sections`, `items`,
+  `time_logs`) has row-level security scoped to `auth.uid()`
+  (`supabase/migrations/20260715120000_initial_schema.sql`).
 - **Computed progress**: `lib/progress.ts` derives completion percentage
   from item statuses and an AHEAD / ON_TRACK / BEHIND label from elapsed
   time vs. a phase's `target_start`/`target_end` window — no stored
