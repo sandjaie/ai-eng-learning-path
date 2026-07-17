@@ -124,17 +124,21 @@ export function selectStudyNext(
     return { type: "path_complete", completedPhase: toPhase(active) };
   }
 
+  // No active phase: recommend activating the next planned phase (e.g. after
+  // markItemAchieved completed the previous active phase).
   const planned = activePhases.find((p) => p.status === "planned");
   if (planned) {
-    // No active phase: treat as needing activation of first planned
-    const first = activePhases[0];
-    if (first.status === "planned") {
-      return {
-        type: "phase_transition",
-        completedPhase: toPhase(first),
-        nextPhase: toPhase(first),
-      };
-    }
+    const priorComplete =
+      [...activePhases]
+        .filter((p) => p.status === "complete" && p.sort_order < planned.sort_order)
+        .at(-1) ??
+      [...activePhases].reverse().find((p) => p.status === "complete") ??
+      null;
+    return {
+      type: "phase_transition",
+      completedPhase: priorComplete ? toPhase(priorComplete) : toPhase(planned),
+      nextPhase: toPhase(planned),
+    };
   }
 
   const lastComplete = [...activePhases].reverse().find((p) => p.status === "complete") ?? null;

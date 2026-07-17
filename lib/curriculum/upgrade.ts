@@ -69,14 +69,20 @@ export function planCurriculumUpgrade(
         (LEGACY_PARALLEL_PHASE_TITLES as readonly string[]).includes(p.title),
     )
     .map((p) => p.id);
+  const archivePhaseIdSet = new Set(archivePhaseIds);
 
+  // Only remove unverified Claude cert claims from legacy parallel phases.
+  // Personal items in sequential phases (even with similar titles) are preserved.
   const removeBannedItemIds = snapshot.items
-    .filter((i) =>
-      (REMOVED_CLAUDE_CERT_TITLES as readonly string[]).some((t) =>
-        i.title.includes(t.replace("Claude ", "")),
-      ) ||
-      /claude certified (developer|engineer|practitioner)/i.test(i.title),
-    )
+    .filter((i) => {
+      if (!archivePhaseIdSet.has(i.phase_id)) return false;
+      if (i.source_key) return false; // curated rows are relocated/archived with the phase
+      return (
+        (REMOVED_CLAUDE_CERT_TITLES as readonly string[]).some((t) =>
+          i.title.includes(t.replace("Claude ", "")),
+        ) || /claude certified (developer|engineer|practitioner)/i.test(i.title)
+      );
+    })
     .map((i) => i.id);
 
   const activeRevisions = snapshot.phases

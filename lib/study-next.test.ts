@@ -163,6 +163,42 @@ describe("selectStudyNext", () => {
     expect(selectStudyNext(phases, null).type).toBe("path_complete");
   });
 
+  test("after active phase completed, recommends next planned phase", () => {
+    const phases = [
+      phase({
+        id: "p1",
+        title: "One",
+        sort_order: 0,
+        status: "complete",
+        sections: [
+          section({
+            id: "s1",
+            items: [item({ id: "a", title: "A", status: "done" })],
+          }),
+        ],
+      }),
+      phase({
+        id: "p2",
+        title: "Two",
+        sort_order: 1,
+        status: "planned",
+        sections: [
+          section({
+            id: "s2",
+            phase_id: "p2",
+            items: [item({ id: "b", title: "B", section_id: "s2" })],
+          }),
+        ],
+      }),
+    ];
+    const next = selectStudyNext(phases, null);
+    expect(next).toMatchObject({
+      type: "phase_transition",
+      completedPhase: { id: "p1" },
+      nextPhase: { id: "p2" },
+    });
+  });
+
   test("blocks cert milestone while project incomplete", () => {
     const project = item({
       id: "proj",

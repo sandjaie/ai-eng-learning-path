@@ -251,25 +251,42 @@ export async function activatePhase(phaseId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // Validate the target before mutating the current active phase.
+  const { data: target, error: targetError } = await supabase
+    .from("phases")
+    .select("id, status, archived_at")
+    .eq("id", phaseId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (targetError) return { error: targetError.message };
+  if (!target || target.archived_at) return { error: "Phase not found" };
+
   const { data: current } = await supabase
     .from("phases")
     .select("id")
     .eq("user_id", user.id)
     .eq("status", "active")
-    .is("archived_at", null);
+    .is("archived_at", null)
+    .neq("id", phaseId);
   for (const row of current ?? []) {
     const { error } = await supabase
       .from("phases")
       .update({ status: "complete" })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      .eq("user_id", user.id);
     if (error) return { error: error.message };
   }
 
-  const { error } = await supabase
+  const { data: activated, error } = await supabase
     .from("phases")
     .update({ status: "active", activated_at: new Date().toISOString() })
-    .eq("id", phaseId);
+    .eq("id", phaseId)
+    .eq("user_id", user.id)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!activated) return { error: "Phase could not be activated" };
   refresh({ phaseId });
   return { error: null };
 }

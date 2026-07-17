@@ -47,6 +47,14 @@ describe("planCurriculumUpgrade", () => {
           status: "todo",
           notes: null,
         },
+        {
+          id: "i-personal",
+          phase_id: "p0",
+          title: "Claude Certified Developer",
+          source_key: null,
+          status: "done",
+          notes: "My personal goal",
+        },
       ],
     });
     expect(plan.assignPhaseKeys).toEqual([
@@ -54,6 +62,7 @@ describe("planCurriculumUpgrade", () => {
     ]);
     expect(plan.archivePhaseIds).toEqual(["p7", "p8"]);
     expect(plan.removeBannedItemIds).toEqual(["i1"]);
+    expect(plan.removeBannedItemIds).not.toContain("i-personal");
     expect(plan.phasesToInsert).toContain("phase.llms");
   });
 
