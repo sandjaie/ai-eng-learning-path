@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Journey Map</title>
+  <link rel="stylesheet" href="/design-concepts/styles.css">
+</head>
+<body>
+  <nav class="concept-switcher" aria-label="Concept navigation">
+    <strong>Learning-path concepts</strong>
+    <a href="/design-concepts/index.html">Overview</a>
+    <a href="/design-concepts/study-command-center.html">1. Study Command</a>
+    <a href="/design-concepts/journey-map.html" aria-current="page">2. Journey Map</a>
+    <a href="/design-concepts/learning-studio.html">3. Learning Studio</a>
+    <span class="selection">No direction selected</span>
+  </nav>
+
+  <main class="journey-page">
+    <header class="journey-top">
+      <div class="journey-brand">AI Engineer Journey</div>
+      <nav class="journey-nav" aria-label="Application navigation"><a class="active" href="#">My journey</a><a href="#">Study log</a><a href="#">Resources</a><a href="#">Edit plan</a></nav>
+      <button class="button secondary">Friday, 17 July</button>
+    </header>
+
+    <section class="journey-hero">
+      <div>
+        <p class="eyebrow">Your path is in motion</p>
+        <h1>Build depth one outcome at a time.</h1>
+        <p>You are in Phase 1 of 9. Keep the big journey visible, while today stays small and achievable.</p>
+      </div>
+      <aside class="goal-panel">
+        <p class="eyebrow">This week</p>
+        <div class="goal-value">3h 20m <span class="small muted">of 6 hours</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:56%;background:#5966d6"></div></div>
+      </aside>
+    </section>
+
+    <section class="path-ribbon" aria-label="Learning path phases">
+      <div class="path-ribbon-head"><strong>18-month AI Engineer path</strong><span>Phase 1 · Python, ML and mathematical foundations</span></div>
+      <div class="path-line">
+        <div class="path-node active"><span>1</span>Foundations</div><div class="path-node"><span>2</span>LLMs</div><div class="path-node"><span>3</span>RAG</div><div class="path-node"><span>4</span>Agents</div><div class="path-node"><span>5</span>Evaluation</div><div class="path-node"><span>6</span>AWS</div><div class="path-node"><span>7</span>Advanced</div><div class="path-node"><span>8</span>Portfolio</div><div class="path-node"><span>9</span>Positioning</div>
+      </div>
+    </section>
+
+    <div class="mission-grid">
+      <article class="mission">
+        <div class="mission-top">
+          <div><span class="tag current">Today’s mission</span><h2>Python typing and async programming</h2><p class="mission-copy">Learn the mental model, apply it in a small refactor, then explain the trade-offs without relying on notes.</p></div>
+          <div class="mission-step"><strong>2/5</strong><span class="tiny muted">outcomes</span></div>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:40%;background:#5966d6"></div></div>
+        <div class="mission-sections">
+          <section>
+            <h3>Recommended resources</h3>
+            <a class="resource-row" href="#"><span class="source-mark">ML</span><span class="resource-text"><strong>Machine Learning Specialization</strong><span>Continue · 24 min</span></span></a>
+            <a class="resource-row" href="#"><span class="source-mark">PY</span><span class="resource-text"><strong>PyTorch official tutorial</strong><span>Reference · 12 min</span></span></a>
+          </section>
+          <section>
+            <h3>Outcome checkpoint</h3>
+            <div class="outcome-list"><label><input type="checkbox" checked> Explain type hints in your own words</label><label><input type="checkbox" checked> Identify a blocking call</label><label><input type="checkbox"> Complete the async refactor</label><label><input type="checkbox"> Add evidence from the project</label></div>
+          </section>
+        </div>
+        <div class="mission-actions"><button class="button violet">Begin today’s mission</button><button class="button secondary">Adjust mission</button></div>
+      </article>
+
+      <aside class="journey-log">
+        <p class="eyebrow">Learning trail</p>
+        <h2>Proof that you are progressing</h2>
+        <p>Notes, project evidence, and explanations stay attached to the outcome they support.</p>
+        <div class="evidence-card"><strong>Reflection captured</strong><span>Difference between training and inference · Thursday</span></div>
+        <div class="evidence-card"><strong>Project evidence</strong><span>Dataset validation notebook · Tuesday</span></div>
+        <div class="evidence-card"><strong>Outcome achieved</strong><span>Explain precision, recall and F1 · Monday</span></div>
+        <button class="button secondary">Open learning log</button>
+        <button class="button violet select-direction" data-direction="Journey Map" onclick="chooseDirection('Journey Map', this)">Choose this direction</button>
+      </aside>
+    </div>
+  </main>
+  <script src="/design-concepts/app.js"></script>
+</body>
+</html>

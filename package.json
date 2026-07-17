@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
     "verify": "bash scripts/verify.sh",
-    "verify:full": "bash scripts/verify.sh --full"
+    "verify:full": "bash scripts/verify.sh --full",
+    "curriculum:emit-seed": "npx vite-node scripts/emit-curriculum-seed.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

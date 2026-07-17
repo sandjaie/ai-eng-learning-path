@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Study Command Center</title>
+  <link rel="stylesheet" href="/design-concepts/styles.css">
+</head>
+<body>
+  <nav class="concept-switcher" aria-label="Concept navigation">
+    <strong>Learning-path concepts</strong>
+    <a href="/design-concepts/index.html">Overview</a>
+    <a href="/design-concepts/study-command-center.html" aria-current="page">1. Study Command</a>
+    <a href="/design-concepts/journey-map.html">2. Journey Map</a>
+    <a href="/design-concepts/learning-studio.html">3. Learning Studio</a>
+    <span class="selection">No direction selected</span>
+  </nav>
+
+  <main class="preview-shell command">
+    <aside class="command-sidebar">
+      <div class="brand"><span class="brand-mark">AP</span><span>AI Path</span></div>
+      <a class="phase-link active" href="#"><span class="phase-no">1</span><span><strong>Foundations</strong><br>Python, ML and mathematics</span></a>
+      <p class="side-label">Your path</p>
+      <a class="phase-link" href="#"><span class="phase-no">2</span><span><strong>LLMs under the hood</strong><br>Months 3–4</span></a>
+      <a class="phase-link" href="#"><span class="phase-no">3</span><span><strong>Applied LLM and RAG</strong><br>Months 5–6</span></a>
+      <a class="phase-link" href="#"><span class="phase-no">4</span><span><strong>Agents and tools</strong><br>Months 7–8</span></a>
+      <a class="phase-link" href="#"><span class="phase-no">5</span><span><strong>Evaluation and security</strong><br>Months 9–10</span></a>
+      <a class="phase-link" href="#"><span class="phase-no">6</span><span><strong>Production AI</strong><br>Months 11–12</span></a>
+      <p class="side-label">Plan</p>
+      <a class="phase-link" href="#"><span class="phase-no">P</span><span><strong>Edit learning plan</strong><br>Phases, outcomes and dates</span></a>
+    </aside>
+
+    <section class="command-main">
+      <header class="command-top">
+        <span class="date">Friday, 17 July · Week 1 of 78</span>
+        <div class="top-actions"><button class="button secondary">Review progress</button><button class="button secondary">Edit plan</button></div>
+      </header>
+      <div class="welcome">
+        <p class="eyebrow">Today’s learning</p>
+        <h1>Continue building your Python foundations</h1>
+        <p>One focused topic, the right resources, and a clear outcome.</p>
+      </div>
+
+      <article class="current-study">
+        <div class="current-study-head">
+          <div>
+            <span class="tag current">Up next</span>
+            <h2>Python typing and async programming</h2>
+            <div class="lesson-meta"><span>Foundation phase</span><span>45 min focus</span><span>2 of 5 outcomes</span></div>
+          </div>
+          <div class="percent"><strong>40%</strong><span class="tiny muted">topic progress</span></div>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:40%"></div></div>
+        <div class="study-actions"><button class="button teal">Continue studying</button><button class="button secondary">View topic plan</button></div>
+      </article>
+
+      <div class="command-columns">
+        <section class="plain-section">
+          <h3>Resources for this topic</h3>
+          <p>Use these in order, or add your own source.</p>
+          <a class="resource-row" href="#"><span class="source-mark">ML</span><span class="resource-text"><strong>Machine Learning Specialization</strong><span>DeepLearning.AI · Course · 24 min remaining</span></span><span class="tag">Continue</span></a>
+          <a class="resource-row" href="#"><span class="source-mark">PY</span><span class="resource-text"><strong>PyTorch: Learn the Basics</strong><span>Official tutorial · Reference</span></span><span class="tag">Open</span></a>
+          <a class="resource-row" href="#"><span class="source-mark">3B</span><span class="resource-text"><strong>3Blue1Brown Neural Networks</strong><span>Video playlist · Optional</span></span><span class="tag">Later</span></a>
+        </section>
+
+        <section class="checkpoint">
+          <p class="eyebrow">Achievement check</p>
+          <h3>You are done when you can…</h3>
+          <label><input type="checkbox" checked> Explain type hints and why they improve AI-generated code review</label>
+          <label><input type="checkbox" checked> Describe a blocking versus non-blocking operation</label>
+          <label><input type="checkbox"> Refactor a blocking function into an async workflow</label>
+          <label><input type="checkbox"> Explain the result without reading your notes</label>
+          <button class="button secondary" style="width:100%;margin-top:8px">Capture evidence</button>
+        </section>
+      </div>
+    </section>
+
+    <aside class="command-rail">
+      <div class="rail-title"><h2>Study session</h2><span class="tag">Focus</span></div>
+      <section class="session-box">
+        <p class="eyebrow">Suggested session</p>
+        <div class="session-time">45:00</div>
+        <button class="button" onclick="startSession(this)">Start focus session</button>
+      </section>
+      <section class="week-goal">
+        <div class="week-head"><span>Weekly goal</span><span>3h 20m / 6h</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:56%"></div></div>
+        <div class="week-days">
+          <div class="day done">M<span>13</span></div><div class="day done">T<span>14</span></div><div class="day">W<span>15</span></div><div class="day done">T<span>16</span></div><div class="day today">F<span>17</span></div><div class="day">S<span>18</span></div><div class="day">S<span>19</span></div>
+        </div>
+      </section>
+      <section class="capture">
+        <h3>Capture while it is fresh</h3>
+        <textarea aria-label="Study note" placeholder="What clicked? What is still unclear?"></textarea>
+        <div class="capture-actions"><button class="button secondary">Add note</button><button class="button secondary">Attach evidence</button></div>
+      </section>
+      <button class="button teal select-direction" data-direction="Study Command Center" onclick="chooseDirection('Study Command Center', this)" style="width:100%;margin-top:28px">Choose this direction</button>
+    </aside>
+  </main>
+  <script src="/design-concepts/app.js"></script>
+</body>
+</html>

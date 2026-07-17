@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { onTrack, progress, startOfWeekMonday } from "./progress";
+import { onTrack, progress, startOfWeekMonday, trackableProgress, weeklyMinutes } from "./progress";
 
 const items = (done: number, rest: number) => [
   ...Array(done).fill({ status: "done" as const }),
@@ -41,5 +41,39 @@ describe("startOfWeekMonday", () => {
   });
   test("Sunday maps back to previous Monday", () => {
     expect(startOfWeekMonday(new Date("2026-07-19")).toISOString().slice(0, 10)).toBe("2026-07-13");
+  });
+});
+
+describe("trackableProgress", () => {
+  test("excludes reference items from denominator", () => {
+    expect(
+      trackableProgress([
+        { status: "done", kind: "topic" },
+        { status: "todo", kind: "reference" },
+        { status: "todo", kind: "topic" },
+      ]),
+    ).toEqual({ done: 1, total: 2, pct: 50 });
+  });
+});
+
+describe("weeklyMinutes", () => {
+  test("sums closed logs and open session elapsed", () => {
+    const weekStart = startOfWeekMonday(new Date("2026-07-17"));
+    const now = new Date("2026-07-17T12:30:00Z");
+    expect(
+      weeklyMinutes(
+        [
+          { logged_on: "2026-07-14", minutes: 60, started_at: null, ended_at: null },
+          {
+            logged_on: "2026-07-17",
+            minutes: 0,
+            started_at: "2026-07-17T12:00:00Z",
+            ended_at: null,
+          },
+        ],
+        weekStart,
+        now,
+      ),
+    ).toBe(90);
   });
 });

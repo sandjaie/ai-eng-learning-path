@@ -1,74 +1,5 @@
--- Seed the tracker from lib/curriculum. Idempotent: refuses to run twice.
---
--- Regenerate curriculum inserts with: npx vite-node scripts/emit-curriculum-seed.ts
---
--- One file for local + cloud:
---   Local (`supabase start`): if seed_email is the template you@example.com and
---     that user is missing, create email/password auth (local-dev-password).
---   Cloud (SQL editor): set seed_email to your ALLOWED_EMAIL, sign in with Google
---     once first. Auto-create never runs for non-template emails.
--- Seed is NOT run by CI/deploy — only migrations are.
-create extension if not exists pgcrypto with schema extensions;
-
-do $$
-declare
-  uid uuid;
-  seed_email text := 'you@example.com';
-  seed_password text := 'local-dev-password';
-  template_email constant text := 'you@example.com';
-begin
-  select id into uid from auth.users where email = seed_email;
-  if uid is null then
-    if seed_email is distinct from template_email then
-      raise exception
-        'Sign in once with % (Google) before seeding — refusing to create a password user for a non-template email',
-        seed_email;
-    end if;
-
-    uid := gen_random_uuid();
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-      created_at, updated_at, confirmation_token, recovery_token,
-      email_change_token_new, email_change, is_sso_user, is_anonymous
-    ) values (
-      '00000000-0000-0000-0000-000000000000',
-      uid,
-      'authenticated',
-      'authenticated',
-      seed_email,
-      extensions.crypt(seed_password, extensions.gen_salt('bf')),
-      now(),
-      jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email')),
-      '{}'::jsonb,
-      now(),
-      now(),
-      '',
-      '',
-      '',
-      '',
-      false,
-      false
-    );
-    insert into auth.identities (
-      id, user_id, identity_data, provider, provider_id,
-      last_sign_in_at, created_at, updated_at
-    ) values (
-      gen_random_uuid(),
-      uid,
-      jsonb_build_object('sub', uid::text, 'email', seed_email),
-      'email',
-      uid::text,
-      now(),
-      now(),
-      now()
-    );
-  end if;
-  if exists (select 1 from public.phases where user_id = uid) then
-    raise notice 'Phases already exist — skipping seed';
-    return;
-  end if;
-
+-- Generated from lib/curriculum — do not edit by hand.
+-- Included by supabase/seed.sql
 
   insert into public.phases (
     user_id, title, description, sort_order, target_start, target_end,
@@ -1381,5 +1312,3 @@ begin
     '2026-07-17', 'planned'
   from public.phases p
   where p.user_id = uid and p.source_key = 'phase.capstone';
-
-end $$;

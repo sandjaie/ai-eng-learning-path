@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Learning Studio</title>
+  <link rel="stylesheet" href="/design-concepts/styles.css">
+</head>
+<body>
+  <nav class="concept-switcher" aria-label="Concept navigation">
+    <strong>Learning-path concepts</strong>
+    <a href="/design-concepts/index.html">Overview</a>
+    <a href="/design-concepts/study-command-center.html">1. Study Command</a>
+    <a href="/design-concepts/journey-map.html">2. Journey Map</a>
+    <a href="/design-concepts/learning-studio.html" aria-current="page">3. Learning Studio</a>
+    <span class="selection">No direction selected</span>
+  </nav>
+
+  <main class="studio">
+    <header class="studio-top">
+      <div class="brand"><span class="brand-mark">AP</span><span>AI Path Studio</span></div>
+      <span class="studio-breadcrumb">Foundations / Python / Typing and async</span>
+      <div class="studio-actions"><button class="button secondary">Exit to roadmap</button><button class="button">Complete session</button></div>
+    </header>
+
+    <div class="studio-grid">
+      <aside class="studio-syllabus">
+        <p class="eyebrow">Phase 1 of 9</p>
+        <h2>Python, ML and mathematics</h2>
+        <section class="syllabus-group">
+          <div class="syllabus-group-title"><span>Learn</span><span>2 / 9</span></div>
+          <a class="lesson-link done" href="#">Python environment and tooling</a>
+          <a class="lesson-link done" href="#">Core language refresh</a>
+          <a class="lesson-link active" href="#">Typing and async programming</a>
+          <a class="lesson-link" href="#">NumPy and pandas</a>
+          <a class="lesson-link" href="#">Training and test datasets</a>
+        </section>
+        <section class="syllabus-group">
+          <div class="syllabus-group-title"><span>Build</span><span>0 / 10</span></div>
+          <a class="lesson-link" href="#">Support-ticket classifier</a>
+          <a class="lesson-link" href="#">Traditional ML baseline</a>
+          <a class="lesson-link" href="#">LLM-based classifier</a>
+        </section>
+        <section class="syllabus-group">
+          <div class="syllabus-group-title"><span>Exit criteria</span><span>0 / 5</span></div>
+          <a class="lesson-link" href="#">Explain model performance</a>
+          <a class="lesson-link" href="#">Spot data leakage</a>
+        </section>
+      </aside>
+
+      <section class="studio-main">
+        <p class="eyebrow">Current lesson · 45 minutes</p>
+        <h1>Python typing and async programming</h1>
+        <p class="lead">Build a mental model you can explain, then prove it by refactoring a blocking workflow and reviewing the generated code.</p>
+
+        <nav class="lesson-tabs" aria-label="Lesson mode">
+          <button class="lesson-tab active" onclick="switchStudioTab(this,'learn')">Learn</button>
+          <button class="lesson-tab" onclick="switchStudioTab(this,'practice')">Practice</button>
+          <button class="lesson-tab" onclick="switchStudioTab(this,'reflect')">Reflect</button>
+        </nav>
+
+        <section class="studio-panel">
+          <h2 id="studio-panel-title">How to approach this topic</h2>
+          <p id="studio-panel-copy">Use the short reading path below, then explain the difference between synchronous and asynchronous execution in your own words.</p>
+          <div class="study-objective">
+            <div><h3>Session objective</h3><p>Review the core concepts, refactor one blocking example, and capture a short explanation as evidence.</p></div>
+            <div class="objective-time">Estimated 45 min</div>
+          </div>
+          <div class="studio-checks">
+            <label><input type="checkbox" checked> Review Python type hints and common typing patterns</label>
+            <label><input type="checkbox"> Explain event loops, coroutines, and blocking operations</label>
+            <label><input type="checkbox"> Refactor the supplied example into an async workflow</label>
+            <label><input type="checkbox"> Record what changed and how you verified it</label>
+          </div>
+          <div class="studio-bottom-actions"><button class="button">Start 45-minute focus</button><button class="button secondary">Save for later</button></div>
+        </section>
+      </section>
+
+      <aside class="studio-rail">
+        <p class="eyebrow">Study resources</p>
+        <h2>For this lesson</h2>
+        <a class="studio-resource" href="#"><span class="tag">Primary</span><strong>Machine Learning Specialization</strong><span>Continue from lesson 2 · 24 minutes remaining</span></a>
+        <a class="studio-resource" href="#"><span class="tag">Reference</span><strong>PyTorch: Learn the Basics</strong><span>Official tutorial · Open alongside practice</span></a>
+        <a class="studio-resource" href="#"><span class="tag">Visual</span><strong>3Blue1Brown Neural Networks</strong><span>Optional intuition-building video</span></a>
+        <section class="studio-note">
+          <p class="eyebrow">Learning note</p>
+          <h2>Capture evidence</h2>
+          <textarea aria-label="Learning evidence" placeholder="What did you understand or build?"></textarea>
+          <button class="button">Save note and evidence</button>
+        </section>
+        <button class="button select-direction" data-direction="Learning Studio" onclick="chooseDirection('Learning Studio', this)" style="width:100%;margin-top:22px;background:#87dfc9;color:#14231f">Choose this direction</button>
+      </aside>
+    </div>
+  </main>
+  <script src="/design-concepts/app.js"></script>
+</body>
+</html>
