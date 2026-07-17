@@ -3,9 +3,13 @@
 :root {
   --paper: #f7f5ef;
   --ink: #17213a;
-  --muted: #6f7890;
+  --muted: #5c6578;
   --card: #ffffff;
   --on-color: #ffffff;
+  /* Filled brand surfaces stay dark in both themes so on-color text stays readable */
+  --navy: #17213a;
+  --on-navy: #ffffff;
+  --navy-muted: #9da9c4;
   --line: #dfe3ec;
   --teal: #1f8a7a;
   --teal-soft: #dff3ee;
@@ -21,14 +25,17 @@
   :root:not([data-theme="light"]) {
     --paper: #121826;
     --ink: #e8ecf5;
-    --muted: #9aa3b8;
+    --muted: #b4bdd0;
     --card: #1a2234;
     --on-color: #ffffff;
-    --line: #2c354a;
-    --teal: #3cb9a5;
-    --teal-soft: #1a3d38;
-    --gold: #e2b34a;
-    --gold-soft: #3d3218;
+    --navy: #0d1320;
+    --on-navy: #f3f6ff;
+    --navy-muted: #b0bbd4;
+    --line: #3a455c;
+    --teal: #4ecdb8;
+    --teal-soft: #204740;
+    --gold: #f0c35a;
+    --gold-soft: #4a3a14;
     --rail: #161d2c;
     --sidebar: #151c2a;
     --shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
@@ -37,14 +44,17 @@
 :root[data-theme="dark"] {
   --paper: #121826;
   --ink: #e8ecf5;
-  --muted: #9aa3b8;
+  --muted: #b4bdd0;
   --card: #1a2234;
   --on-color: #ffffff;
-  --line: #2c354a;
-  --teal: #3cb9a5;
-  --teal-soft: #1a3d38;
-  --gold: #e2b34a;
-  --gold-soft: #3d3218;
+  --navy: #0d1320;
+  --on-navy: #f3f6ff;
+  --navy-muted: #b0bbd4;
+  --line: #3a455c;
+  --teal: #4ecdb8;
+  --teal-soft: #204740;
+  --gold: #f0c35a;
+  --gold-soft: #4a3a14;
   --rail: #161d2c;
   --sidebar: #151c2a;
   --shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
@@ -52,9 +62,12 @@
 :root[data-theme="light"] {
   --paper: #f7f5ef;
   --ink: #17213a;
-  --muted: #6f7890;
+  --muted: #5c6578;
   --card: #ffffff;
   --on-color: #ffffff;
+  --navy: #17213a;
+  --on-navy: #ffffff;
+  --navy-muted: #9da9c4;
   --line: #dfe3ec;
   --teal: #1f8a7a;
   --teal-soft: #dff3ee;
@@ -71,6 +84,9 @@
   --color-muted: var(--muted);
   --color-card: var(--card);
   --color-on-color: var(--on-color);
+  --color-navy: var(--navy);
+  --color-on-navy: var(--on-navy);
+  --color-navy-muted: var(--navy-muted);
   --color-line: var(--line);
   --color-teal: var(--teal);
   --color-teal-soft: var(--teal-soft);
@@ -117,8 +133,8 @@ body {
   border-color: var(--line);
 }
 .scc-btn-navy {
-  background: var(--ink);
-  color: var(--on-color);
+  background: var(--navy);
+  color: var(--on-navy);
 }
 .scc-btn-gold {
   background: var(--gold);
@@ -173,7 +189,16 @@ body {
 }
 .scc-tag-current {
   background: var(--gold-soft);
-  color: color-mix(in srgb, var(--gold) 40%, var(--ink));
+  color: var(--ink);
+}
+.scc-panel-navy {
+  background: var(--navy);
+  color: var(--on-navy);
+}
+.scc-check-panel {
+  background: var(--gold-soft);
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line));
 }
 
 /* Legacy Blocks helpers kept for login during migration */

@@ -285,6 +285,99 @@ async function ensureCuratedChildren(
   return { error: null };
 }
 
+/** True only when every curated source_key from the roadmap exists for the user. */
+export async function isCurriculumFullyMaterialized(
+  supabase: Db,
+  userId: string,
+): Promise<boolean> {
+  const m = materializeCurriculum();
+  const [{ data: phases }, { data: sections }, { data: items }, { data: criteria }, { data: resources }] =
+    await Promise.all([
+      supabase.from("phases").select("source_key").eq("user_id", userId).is("archived_at", null),
+      supabase.from("sections").select("source_key").eq("user_id", userId),
+      supabase.from("items").select("source_key").eq("user_id", userId),
+      supabase.from("achievement_criteria").select("source_key").eq("user_id", userId),
+      supabase.from("resources").select("source_key").eq("user_id", userId),
+    ]);
+  const have = (rows: { source_key: string | null }[] | null) =>
+    new Set((rows ?? []).map((r) => r.source_key).filter(Boolean) as string[]);
+  const phaseKeys = have(phases as { source_key: string | null }[]);
+  const sectionKeys = have(sections as { source_key: string | null }[]);
+  const itemKeys = have(items as { source_key: string | null }[]);
+  const criterionKeys = have(criteria as { source_key: string | null }[]);
+  const resourceKeys = have(resources as { source_key: string | null }[]);
+  return (
+    m.phases.every((p) => phaseKeys.has(p.source_key)) &&
+    m.sections.every((s) => sectionKeys.has(s.source_key)) &&
+    m.items.every((i) => itemKeys.has(i.source_key)) &&
+    m.criteria.every((c) => criterionKeys.has(c.source_key)) &&
+    m.resources.every((r) => resourceKeys.has(r.source_key))
+  );
+}
+
+async function relocateLegacyItems(
+  supabase: Db,
+  userId: string,
+  itemIds: string[],
+): Promise<{ error: string | null }> {
+  if (itemIds.length === 0) return { error: null };
+
+  const { data: destPhase } = await supabase
+    .from("phases")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("source_key", "phase.production-aws")
+    .is("archived_at", null)
+    .maybeSingle();
+  let phaseId = destPhase?.id as string | undefined;
+  if (!phaseId) {
+    const { data: fallback } = await supabase
+      .from("phases")
+      .select("id")
+      .eq("user_id", userId)
+      .not("source_key", "is", null)
+      .is("archived_at", null)
+      .order("sort_order")
+      .limit(1)
+      .maybeSingle();
+    phaseId = fallback?.id as string | undefined;
+  }
+  if (!phaseId) return { error: "No sequential phase available to preserve legacy items" };
+
+  const preservedKey = "phase.legacy.preserved";
+  let { data: section } = await supabase
+    .from("sections")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("source_key", preservedKey)
+    .maybeSingle();
+  if (!section) {
+    const { data: created, error } = await supabase
+      .from("sections")
+      .insert({
+        user_id: userId,
+        phase_id: phaseId,
+        title: "Preserved from legacy path",
+        kind: "custom",
+        sort_order: 90,
+        source_key: preservedKey,
+        source_revision: curriculumRoadmap.revision,
+      })
+      .select("id")
+      .single();
+    if (error) return { error: error.message };
+    section = created;
+  }
+
+  const { error: moveError } = await supabase
+    .from("items")
+    .update({ section_id: section.id })
+    .eq("user_id", userId)
+    .in("id", itemIds);
+  if (moveError) return { error: moveError.message };
+  return { error: null };
+}
+
 export async function runCurriculumUpgrade(
   supabase: Db,
   userId: string,
@@ -333,20 +426,13 @@ export async function runCurriculumUpgrade(
     if (upError) return { error: upError.message, alreadyCurrent: false };
   }
 
-  if (plan.removeBannedItemIds.length > 0) {
-    const { error: delError } = await supabase
+  for (const rename of plan.renameBannedItemIds) {
+    const { error: renameError } = await supabase
       .from("items")
-      .delete()
-      .in("id", plan.removeBannedItemIds);
-    if (delError) return { error: delError.message, alreadyCurrent: false };
-  }
-
-  if (plan.archivePhaseIds.length > 0) {
-    const { error: archError } = await supabase
-      .from("phases")
-      .update({ archived_at: new Date().toISOString() })
-      .in("id", plan.archivePhaseIds);
-    if (archError) return { error: archError.message, alreadyCurrent: false };
+      .update({ title: rename.title })
+      .eq("id", rename.id)
+      .eq("user_id", userId);
+    if (renameError) return { error: renameError.message, alreadyCurrent: false };
   }
 
   const m = materializeCurriculum();
@@ -372,20 +458,30 @@ export async function runCurriculumUpgrade(
   const children = await ensureCuratedChildren(supabase, userId);
   if (children.error) return { error: children.error, alreadyCurrent: false };
 
-  await supabase
-    .from("phases")
-    .update({ source_revision: plan.revision })
-    .eq("user_id", userId)
-    .not("source_key", "is", null);
+  // Preserve learning history: move parallel-phase items before archiving parents.
+  const relocated = await relocateLegacyItems(supabase, userId, plan.relocateItemIds);
+  if (relocated.error) return { error: relocated.error, alreadyCurrent: false };
 
-  // Re-check after reconcile: only "already current" when nothing structural changed.
-  if (
-    plan.alreadyCurrent &&
-    plan.phasesToInsert.length === 0 &&
-    plan.assignPhaseKeys.length === 0
-  ) {
-    return { error: null, alreadyCurrent: true };
+  if (plan.archivePhaseIds.length > 0) {
+    const { error: archError } = await supabase
+      .from("phases")
+      .update({ archived_at: new Date().toISOString() })
+      .in("id", plan.archivePhaseIds)
+      .eq("user_id", userId);
+    if (archError) return { error: archError.message, alreadyCurrent: false };
   }
 
-  return { error: null, alreadyCurrent: false };
+  const complete = await isCurriculumFullyMaterialized(supabase, userId);
+  if (complete) {
+    await supabase
+      .from("phases")
+      .update({ source_revision: plan.revision })
+      .eq("user_id", userId)
+      .not("source_key", "is", null);
+  }
+
+  return {
+    error: null,
+    alreadyCurrent: complete && plan.alreadyCurrent,
+  };
 }

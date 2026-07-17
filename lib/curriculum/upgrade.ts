@@ -35,9 +35,21 @@ export interface UpgradePlan {
   revision: string;
   assignPhaseKeys: { id: string; source_key: string }[];
   phasesToInsert: string[];
+  /** Parallel phases to archive only after their items are relocated. */
   archivePhaseIds: string[];
-  removeBannedItemIds: string[];
+  /** Move these items into the preserved-legacy section of a sequential phase. */
+  relocateItemIds: string[];
+  /** Retire false cert claims without deleting progress/history. */
+  renameBannedItemIds: { id: string; title: string }[];
   alreadyCurrent: boolean;
+}
+
+function isBannedClaudeCertTitle(title: string): boolean {
+  return (
+    (REMOVED_CLAUDE_CERT_TITLES as readonly string[]).some((t) =>
+      title.includes(t.replace("Claude ", "")),
+    ) || /claude certified (developer|engineer|practitioner)/i.test(title)
+  );
 }
 
 export function planCurriculumUpgrade(
@@ -71,20 +83,19 @@ export function planCurriculumUpgrade(
     .map((p) => p.id);
   const archivePhaseIdSet = new Set(archivePhaseIds);
 
-  // Only remove unverified Claude cert claims from legacy parallel phases.
-  // Personal items in sequential phases (even with similar titles) are preserved.
-  const removeBannedItemIds = snapshot.items
-    .filter((i) => {
-      if (!archivePhaseIdSet.has(i.phase_id)) return false;
-      if (i.source_key) return false; // curated rows are relocated/archived with the phase
-      return (
-        (REMOVED_CLAUDE_CERT_TITLES as readonly string[]).some((t) =>
-          i.title.includes(t.replace("Claude ", "")),
-        ) || /claude certified (developer|engineer|practitioner)/i.test(i.title)
-      );
-    })
+  const relocateItemIds = snapshot.items
+    .filter((i) => archivePhaseIdSet.has(i.phase_id))
     .map((i) => i.id);
 
+  const renameBannedItemIds = snapshot.items
+    .filter((i) => archivePhaseIdSet.has(i.phase_id) && isBannedClaudeCertTitle(i.title))
+    .filter((i) => !i.title.includes("(retired claim)"))
+    .map((i) => ({
+      id: i.id,
+      title: `${i.title} (retired claim — kept for history)`,
+    }));
+
+  // Phase-key presence alone is never enough for "current"; apply.ts verifies children.
   const activeRevisions = snapshot.phases
     .filter((p) => p.source_key && !p.archived_at)
     .map((p) => p.source_revision);
@@ -92,7 +103,8 @@ export function planCurriculumUpgrade(
     phasesToInsert.length === 0 &&
     assignPhaseKeys.length === 0 &&
     archivePhaseIds.length === 0 &&
-    removeBannedItemIds.length === 0 &&
+    relocateItemIds.length === 0 &&
+    renameBannedItemIds.length === 0 &&
     activeRevisions.length >= 8 &&
     activeRevisions.every((r) => r === CURRICULUM_REVISION);
 
@@ -101,7 +113,8 @@ export function planCurriculumUpgrade(
     assignPhaseKeys,
     phasesToInsert,
     archivePhaseIds,
-    removeBannedItemIds,
+    relocateItemIds,
+    renameBannedItemIds,
     alreadyCurrent,
   };
 }
@@ -135,8 +148,21 @@ export function applyUpgradePlan(snapshot: Snapshot, plan: UpgradePlan): Snapsho
     });
   }
 
-  const banned = new Set(plan.removeBannedItemIds);
-  const items = snapshot.items.filter((i) => !banned.has(i.id));
+  const rename = new Map(plan.renameBannedItemIds.map((r) => [r.id, r.title]));
+  const preservePhaseId =
+    phases.find((p) => p.source_key === "phase.production-aws" && !p.archived_at)?.id ??
+    phases.find((p) => p.source_key && !p.archived_at)?.id ??
+    null;
+
+  const items = snapshot.items.map((i) => {
+    let next = { ...i };
+    const renamed = rename.get(i.id);
+    if (renamed) next = { ...next, title: renamed };
+    if (plan.relocateItemIds.includes(i.id) && preservePhaseId) {
+      next = { ...next, phase_id: preservePhaseId };
+    }
+    return next;
+  });
 
   return { phases, items };
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ActionError } from "@/components/action-error";
 import { AppShell } from "@/components/app-shell";
 import { CapturePanel } from "@/components/capture-panel";
 import { PathBuilder } from "@/components/path-builder";
@@ -12,7 +13,12 @@ import { loadPhasesWithTree, loadPreferences, requireUser } from "@/lib/queries"
 import { selectStudyNext } from "@/lib/study-next";
 import { WEEKLY_GOAL_MIN, type Resource } from "@/lib/types";
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const { supabase } = await requireUser();
   const phases = await loadPhasesWithTree();
   const prefs = await loadPreferences();
@@ -20,6 +26,7 @@ export default async function Dashboard() {
   if (phases.length === 0) {
     return (
       <AppShell>
+        <ActionError message={error} />
         <PathBuilder />
       </AppShell>
     );
@@ -98,6 +105,7 @@ export default async function Dashboard() {
         </div>
       }
     >
+      <ActionError message={error} />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-muted">

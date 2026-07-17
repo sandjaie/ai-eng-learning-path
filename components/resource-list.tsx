@@ -49,7 +49,7 @@ export function ResourceList({
                   r.id,
                   phaseId,
                   r.status === "planned" ? "using" : r.status === "using" ? "completed" : "planned",
-                  itemId,
+                  itemId ?? null,
                 )}
               >
                 <button type="submit" className="scc-btn scc-btn-secondary min-h-11 px-3 text-xs">
@@ -57,7 +57,7 @@ export function ResourceList({
                 </button>
               </form>
               {editable ? (
-                <form action={deleteResourceAction.bind(null, r.id, phaseId, itemId)}>
+                <form action={deleteResourceAction.bind(null, r.id, phaseId, itemId ?? null)}>
                   <button type="submit" className="scc-btn scc-btn-secondary min-h-11 px-3 text-xs">
                     Delete
                   </button>
@@ -70,7 +70,12 @@ export function ResourceList({
       {editable ? (
         <form action={createResourceAction.bind(null, phaseId)} className="scc-card space-y-3 p-4">
           <h4 className="text-sm font-bold">Add a resource</h4>
-          {itemId ? <input type="hidden" name="item_id" value={itemId} /> : null}
+          {itemId ? (
+            <>
+              <input type="hidden" name="item_id" value={itemId} />
+              <input type="hidden" name="return_to" value={`/study/${itemId}`} />
+            </>
+          ) : null}
           <label className="block text-xs font-bold">
             Title
             <input className="scc-input mt-1" name="title" required />

@@ -19,7 +19,7 @@ export function AppShell({
         <aside className="border-line bg-sidebar border-b px-5 py-7 lg:border-r lg:border-b-0">
           <div className="mb-6 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-2.5 font-display text-lg font-bold">
-              <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-ink text-sm text-on-color">
+              <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-navy text-sm text-on-navy">
                 AP
               </span>
               <span>{brand}</span>

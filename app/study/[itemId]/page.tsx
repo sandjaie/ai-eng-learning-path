@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pinStudyItemAction } from "@/app/actions";
+import { ActionError } from "@/components/action-error";
 import { AchievementChecklist } from "@/components/achievement-checklist";
 import { AppShell } from "@/components/app-shell";
 import { CapturePanel } from "@/components/capture-panel";
@@ -13,10 +14,13 @@ import { WEEKLY_GOAL_MIN, type Resource } from "@/lib/types";
 
 export default async function StudyPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ itemId: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { itemId } = await params;
+  const { error } = await searchParams;
   const { supabase } = await requireUser();
   const phases = await loadPhasesWithTree();
   const prefs = await loadPreferences();
@@ -89,6 +93,7 @@ export default async function StudyPage({
         </div>
       }
     >
+      <ActionError message={error} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/" className="text-sm font-bold text-muted hover:text-ink">
           ← Study command

@@ -31,10 +31,25 @@ export async function createPhase(formData: FormData) {
   if (readError) throw readError;
   const { data, error } = await supabase
     .from("phases")
-    .insert({ title, sort_order: (existing?.[0]?.sort_order ?? -1) + 1 })
+    .insert({ title, sort_order: (existing?.[0]?.sort_order ?? -1) + 1, status: "planned" })
     .select("id")
     .single();
   if (error) throw error;
+  const { data: section, error: sectionError } = await supabase
+    .from("sections")
+    .insert({ phase_id: data.id, title: "Topics", kind: "topics", sort_order: 0 })
+    .select("id")
+    .single();
+  if (sectionError) throw sectionError;
+  const { error: itemError } = await supabase.from("items").insert({
+    section_id: section.id,
+    title: `First topic for ${title}`,
+    kind: "topic",
+    status: "todo",
+    sort_order: 0,
+    estimated_minutes: 45,
+  });
+  if (itemError) throw itemError;
   refresh();
   redirect(`/plan?phase=${data.id}`);
 }
@@ -74,7 +89,7 @@ export async function savePhaseNotes(id: string, notes: string) {
 // ---------- ordering helper ----------
 
 async function swapOrder(
-  table: "sections" | "items",
+  table: "sections" | "items" | "phases",
   scope: { column: string; value: string },
   id: string,
   dir: -1 | 1,
@@ -139,8 +154,9 @@ export async function moveSection(id: string, phaseId: string, dir: -1 | 1) {
 
 export async function createItem(sectionId: string, phaseId: string, formData: FormData) {
   const title = str(formData, "title");
-  if (!title) return;
+  if (!title) return { error: "Title required" };
   const url = orNull(str(formData, "url"));
+  const kindRaw = str(formData, "kind");
   const supabase = await createClient();
   const { data: section } = await supabase
     .from("sections")
@@ -154,33 +170,59 @@ export async function createItem(sectionId: string, phaseId: string, formData: F
     topics: "topic",
     custom: "topic",
   };
-  const kind = kindMap[section?.kind as string] ?? "topic";
+  const fromForm = (["topic", "project_task", "milestone"].includes(kindRaw)
+    ? kindRaw
+    : null) as ItemKind | null;
+  const kind = fromForm ?? kindMap[section?.kind as string] ?? "topic";
+  const minutesRaw = str(formData, "estimated_minutes");
+  const estimated_minutes = minutesRaw ? Number(minutesRaw) : null;
+  if (estimated_minutes != null && (!Number.isFinite(estimated_minutes) || estimated_minutes <= 0)) {
+    return { error: "Estimated minutes must be a positive number" };
+  }
   const { data: existing, error: readError } = await supabase
     .from("items").select("sort_order").eq("section_id", sectionId)
     .order("sort_order", { ascending: false }).limit(1);
-  if (readError) throw readError;
+  if (readError) return { error: readError.message };
   const { error } = await supabase.from("items").insert({
     section_id: sectionId,
     title,
     url,
     provider: url ? detectProvider(url) : null,
-    kind: kind === "reference" ? "topic" : kind, // plan editor does not create reference rows
+    kind: kind === "reference" ? "topic" : kind,
+    estimated_minutes,
     sort_order: (existing?.[0]?.sort_order ?? -1) + 1,
   });
-  if (error) throw error;
+  if (error) return { error: error.message };
   refresh({ phaseId });
+  return { error: null };
 }
 
 export async function updateItem(id: string, phaseId: string, formData: FormData) {
   const title = str(formData, "title");
-  if (!title) return;
+  if (!title) return { error: "Title required" };
   const url = orNull(str(formData, "url"));
   let provider = orNull(str(formData, "provider"));
   if (!provider && url) provider = detectProvider(url);
+  const kindRaw = str(formData, "kind");
+  const kind = (["topic", "project_task", "milestone"].includes(kindRaw)
+    ? kindRaw
+    : undefined) as ItemKind | undefined;
+  const minutesRaw = str(formData, "estimated_minutes");
+  const estimated_minutes = minutesRaw ? Number(minutesRaw) : null;
+  if (estimated_minutes != null && (!Number.isFinite(estimated_minutes) || estimated_minutes <= 0)) {
+    return { error: "Estimated minutes must be a positive number" };
+  }
   const supabase = await createClient();
-  const { error } = await supabase.from("items").update({ title, url, provider }).eq("id", id);
-  if (error) throw error;
+  const { error } = await supabase.from("items").update({
+    title,
+    url,
+    provider,
+    ...(kind ? { kind } : {}),
+    estimated_minutes,
+  }).eq("id", id);
+  if (error) return { error: error.message };
   refresh({ phaseId, itemId: id });
+  return { error: null };
 }
 
 export async function deleteItem(id: string, phaseId: string) {
@@ -246,6 +288,22 @@ export async function deleteTimeLog(id: string, phaseId: string) {
 
 // ---------- study command ----------
 
+async function phaseHasIncompleteTrackable(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  phaseId: string,
+): Promise<boolean> {
+  const { data: sections } = await supabase
+    .from("sections")
+    .select("id, items(id, status, kind)")
+    .eq("phase_id", phaseId);
+  const trackable = (sections ?? []).flatMap((s) =>
+    ((s.items ?? []) as { status: string; kind: string }[]).filter((i) =>
+      ["topic", "project_task", "milestone"].includes(i.kind),
+    ),
+  );
+  return trackable.some((i) => i.status !== "done");
+}
+
 export async function activatePhase(phaseId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -263,12 +321,18 @@ export async function activatePhase(phaseId: string) {
 
   const { data: current } = await supabase
     .from("phases")
-    .select("id")
+    .select("id, title")
     .eq("user_id", user.id)
     .eq("status", "active")
     .is("archived_at", null)
     .neq("id", phaseId);
+
   for (const row of current ?? []) {
+    if (await phaseHasIncompleteTrackable(supabase, row.id as string)) {
+      return {
+        error: `Finish “${row.title}” before starting another phase. Incomplete topics would otherwise be marked complete.`,
+      };
+    }
     const { error } = await supabase
       .from("phases")
       .update({ status: "complete" })
@@ -441,6 +505,28 @@ export async function deleteResource(id: string, phaseId: string, itemId?: strin
   return { error: null };
 }
 
+export async function updateResource(id: string, phaseId: string, formData: FormData) {
+  const title = str(formData, "title");
+  const url = str(formData, "url");
+  if (!title || !isValidHttpsUrl(url)) return { error: "Title and HTTPS URL required" };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("resources")
+    .update({
+      title,
+      url,
+      provider: orNull(str(formData, "provider")) ?? detectProvider(url),
+      resource_type: str(formData, "resource_type") || "other",
+      priority: str(formData, "priority") || "primary",
+      estimated_minutes: Number(formData.get("estimated_minutes")) || null,
+      description: orNull(str(formData, "description")),
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  refresh({ phaseId });
+  return { error: null };
+}
+
 export async function createCriterion(itemId: string, phaseId: string, formData: FormData) {
   const description = str(formData, "description");
   if (!description) return { error: "Description required" };
@@ -457,6 +543,35 @@ export async function createCriterion(itemId: string, phaseId: string, formData:
     is_required: formData.get("is_required") !== "false",
     sort_order: (existing?.[0]?.sort_order ?? -1) + 1,
   });
+  if (error) return { error: error.message };
+  refresh({ phaseId, itemId });
+  return { error: null };
+}
+
+export async function updateCriterion(
+  id: string,
+  itemId: string,
+  phaseId: string,
+  formData: FormData,
+) {
+  const description = str(formData, "description");
+  if (!description) return { error: "Description required" };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("achievement_criteria")
+    .update({
+      description,
+      is_required: formData.get("is_required") === "on" || formData.get("is_required") === "true",
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  refresh({ phaseId, itemId });
+  return { error: null };
+}
+
+export async function deleteCriterion(id: string, itemId: string, phaseId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("achievement_criteria").delete().eq("id", id);
   if (error) return { error: error.message };
   refresh({ phaseId, itemId });
   return { error: null };
@@ -600,14 +715,16 @@ export async function savePathBuilder(formData: FormData) {
     .split("\n")
     .map((t) => t.trim())
     .filter(Boolean);
+  if (phaseTitles.length === 0) return { error: "Add at least one phase" };
 
-  await supabase.from("user_preferences").upsert({
+  const { error: prefError } = await supabase.from("user_preferences").upsert({
     user_id: user.id,
     path_title,
     path_goal,
     weekly_goal_min_minutes,
     weekly_goal_max_minutes,
   });
+  if (prefError) return { error: prefError.message };
 
   const { count } = await supabase
     .from("phases")
@@ -629,16 +746,139 @@ export async function savePathBuilder(formData: FormData) {
       .single();
     if (error) return { error: error.message };
     if (i === 0) firstId = data.id as string;
-    await supabase.from("sections").insert({
-      phase_id: data.id,
-      title: "Topics",
-      kind: "topics",
+    const { data: section, error: sectionError } = await supabase
+      .from("sections")
+      .insert({
+        phase_id: data.id,
+        title: "Topics",
+        kind: "topics",
+        sort_order: 0,
+      })
+      .select("id")
+      .single();
+    if (sectionError) return { error: sectionError.message };
+    const { error: itemError } = await supabase.from("items").insert({
+      section_id: section.id,
+      title: `First topic for ${phaseTitles[i]}`,
+      kind: "topic",
+      status: "todo",
       sort_order: 0,
+      estimated_minutes: 45,
     });
+    if (itemError) return { error: itemError.message };
   }
 
   refresh({ phaseId: firstId ?? undefined });
   return { error: null, phaseId: firstId };
+}
+
+export async function movePhase(id: string, dir: -1 | 1) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+  try {
+    await swapOrder("phases", { column: "user_id", value: user.id }, id, dir);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not reorder phase" };
+  }
+  refresh();
+  return { error: null };
+}
+
+export async function duplicatePhase(id: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: source, error } = await supabase
+    .from("phases")
+    .select(`
+      title, description, notes, sort_order, target_start, target_end,
+      sections (
+        title, sort_order, kind,
+        items (title, url, provider, status, notes, sort_order, kind, estimated_minutes)
+      )
+    `)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+  if (error || !source) return { error: error?.message ?? "Phase not found" };
+
+  const { data: last } = await supabase
+    .from("phases")
+    .select("sort_order")
+    .eq("user_id", user.id)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  const { data: created, error: createError } = await supabase
+    .from("phases")
+    .insert({
+      title: `${source.title} (copy)`,
+      description: source.description,
+      notes: source.notes,
+      sort_order: (last?.[0]?.sort_order ?? -1) + 1,
+      target_start: source.target_start,
+      target_end: source.target_end,
+      status: "planned",
+    })
+    .select("id")
+    .single();
+  if (createError || !created) return { error: createError?.message ?? "Could not duplicate" };
+
+  for (const section of (source.sections ?? []) as {
+    title: string;
+    sort_order: number;
+    kind: string;
+    items: {
+      title: string;
+      url: string | null;
+      provider: string | null;
+      notes: string | null;
+      sort_order: number;
+      kind: string;
+      estimated_minutes: number | null;
+    }[];
+  }[]) {
+    const { data: newSection, error: sError } = await supabase
+      .from("sections")
+      .insert({
+        phase_id: created.id,
+        title: section.title,
+        sort_order: section.sort_order,
+        kind: section.kind,
+      })
+      .select("id")
+      .single();
+    if (sError || !newSection) return { error: sError?.message ?? "Section copy failed" };
+    for (const item of section.items ?? []) {
+      const { error: iError } = await supabase.from("items").insert({
+        section_id: newSection.id,
+        title: item.title,
+        url: item.url,
+        provider: item.provider,
+        notes: item.notes,
+        sort_order: item.sort_order,
+        kind: item.kind === "reference" ? "topic" : item.kind,
+        estimated_minutes: item.estimated_minutes,
+        status: "todo",
+        completed_at: null,
+      });
+      if (iError) return { error: iError.message };
+    }
+  }
+
+  refresh({ phaseId: created.id as string });
+  redirect(`/plan?phase=${created.id}`);
+}
+
+function redirectWithError(path: string, error: string | null | undefined) {
+  if (!error) {
+    redirect(path);
+    return;
+  }
+  const url = new URL(path, "http://local.invalid");
+  url.searchParams.set("error", error);
+  redirect(`${url.pathname}${url.search}`);
 }
 
 // ---------- auth ----------
@@ -651,46 +891,124 @@ export async function signOut() {
 
 
 // Form-action wrappers (must return void for Next.js form actions)
-export async function activatePhaseAction(phaseId: string) {
-  await activatePhase(phaseId);
+export async function activatePhaseAction(phaseId: string, formData?: FormData) {
+  void formData;
+  const result = await activatePhase(phaseId);
+  if (result.error) redirectWithError("/", result.error);
 }
-export async function pinStudyItemAction(itemId: string | null) {
-  await pinStudyItem(itemId);
+export async function movePhaseAction(id: string, dir: -1 | 1, formData?: FormData) {
+  void formData;
+  const result = await movePhase(id, dir);
+  if (result.error) redirectWithError("/plan", result.error);
+}
+export async function duplicatePhaseAction(id: string, formData?: FormData) {
+  void formData;
+  const result = await duplicatePhase(id);
+  if (result.error) redirectWithError("/plan", result.error);
+}
+export async function updateItemAction(id: string, phaseId: string, formData: FormData) {
+  const result = await updateItem(id, phaseId, formData);
+  if (result.error) redirectWithError(`/plan?phase=${phaseId}`, result.error);
+}
+export async function createItemAction(sectionId: string, phaseId: string, formData: FormData) {
+  const result = await createItem(sectionId, phaseId, formData);
+  if (result?.error) redirectWithError(`/plan?phase=${phaseId}`, result.error);
+}
+export async function updateResourceAction(id: string, phaseId: string, formData: FormData) {
+  const result = await updateResource(id, phaseId, formData);
+  if (result.error) redirectWithError(`/plan?phase=${phaseId}`, result.error);
+}
+export async function updateCriterionAction(
+  id: string,
+  itemId: string,
+  phaseId: string,
+  formData: FormData,
+) {
+  const result = await updateCriterion(id, itemId, phaseId, formData);
+  if (result.error) redirectWithError(`/plan?phase=${phaseId}`, result.error);
+}
+export async function deleteCriterionAction(
+  id: string,
+  itemId: string,
+  phaseId: string,
+  formData?: FormData,
+) {
+  void formData;
+  const result = await deleteCriterion(id, itemId, phaseId);
+  if (result.error) redirectWithError(`/plan?phase=${phaseId}`, result.error);
+}
+export async function pinStudyItemAction(itemId: string | null, formData?: FormData) {
+  void formData;
+  const result = await pinStudyItem(itemId);
+  if (result.error) redirectWithError(itemId ? `/study/${itemId}` : "/", result.error);
 }
 export async function createResourceAction(phaseId: string, formData: FormData) {
-  await createResource(phaseId, formData);
+  const result = await createResource(phaseId, formData);
+  const itemId = str(formData, "item_id");
+  const returnTo =
+    str(formData, "return_to") ||
+    (itemId ? `/study/${itemId}` : `/plan?phase=${phaseId}`);
+  if (result.error) redirectWithError(returnTo, result.error);
 }
 export async function updateResourceStatusAction(
   id: string,
   phaseId: string,
   status: "planned" | "using" | "completed",
-  itemId?: string,
+  itemId: string | null,
+  formData?: FormData,
 ) {
-  await updateResourceStatus(id, phaseId, status, itemId);
+  void formData;
+  const result = await updateResourceStatus(id, phaseId, status, itemId ?? undefined);
+  if (result.error) redirectWithError(itemId ? `/study/${itemId}` : "/", result.error);
 }
-export async function deleteResourceAction(id: string, phaseId: string, itemId?: string) {
-  await deleteResource(id, phaseId, itemId);
+export async function deleteResourceAction(
+  id: string,
+  phaseId: string,
+  itemId: string | null,
+  formData?: FormData,
+) {
+  void formData;
+  const result = await deleteResource(id, phaseId, itemId ?? undefined);
+  const returnTo = itemId ? `/study/${itemId}` : `/plan?phase=${phaseId}`;
+  if (result.error) redirectWithError(returnTo, result.error);
 }
 export async function createCriterionAction(itemId: string, phaseId: string, formData: FormData) {
-  await createCriterion(itemId, phaseId, formData);
+  const result = await createCriterion(itemId, phaseId, formData);
+  const returnTo = str(formData, "return_to") || `/study/${itemId}`;
+  if (result.error) redirectWithError(returnTo, result.error);
 }
 export async function toggleCriterionAction(
   id: string,
   itemId: string,
   phaseId: string,
   achieved: boolean,
+  formData?: FormData,
 ) {
-  await toggleCriterion(id, itemId, phaseId, achieved);
+  void formData;
+  const result = await toggleCriterion(id, itemId, phaseId, achieved);
+  if (result.error) redirectWithError(`/study/${itemId}`, result.error);
 }
-export async function markItemAchievedAction(itemId: string, phaseId: string) {
-  await markItemAchieved(itemId, phaseId);
+export async function markItemAchievedAction(
+  itemId: string,
+  phaseId: string,
+  formData?: FormData,
+) {
+  void formData;
+  const result = await markItemAchieved(itemId, phaseId);
+  if (result.error) redirectWithError(`/study/${itemId}`, result.error);
 }
 export async function createEvidenceAction(itemId: string, phaseId: string, formData: FormData) {
-  await createEvidence(itemId, phaseId, formData);
+  const result = await createEvidence(itemId, phaseId, formData);
+  if (result.error) redirectWithError(`/study/${itemId}`, result.error);
 }
-export async function upgradeCurriculumFormAction() {
-  await upgradeCurriculumAction();
+export async function upgradeCurriculumFormAction(formData?: FormData) {
+  void formData;
+  const result = await upgradeCurriculumAction();
+  if (result.error) redirectWithError("/plan", result.error);
+  redirect("/");
 }
 export async function savePathBuilderAction(formData: FormData) {
-  await savePathBuilder(formData);
+  const result = await savePathBuilder(formData);
+  if (result.error) redirectWithError("/plan", result.error);
+  redirect("/");
 }

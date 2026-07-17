@@ -21,9 +21,9 @@ export function AchievementChecklist({
     required.length > 0 && required.every((c) => c.achieved_at != null);
 
   return (
-    <section className="rounded-[14px] bg-gold-soft p-5">
+    <section className="scc-check-panel rounded-[14px] p-5">
       <p className="text-xs font-bold tracking-wide text-muted uppercase">Achievement check</p>
-      <h3 className="font-display mt-1 text-lg font-bold">You are done when you can…</h3>
+      <h3 className="font-display mt-1 text-lg font-bold text-ink">You are done when you can…</h3>
       {criteria.length === 0 ? (
         <div className="mt-4 space-y-3">
           <p className="text-sm">

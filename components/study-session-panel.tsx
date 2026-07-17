@@ -44,8 +44,8 @@ export function StudySessionPanel({
         <span className="scc-tag">Focus</span>
       </div>
 
-      <section className="rounded-2xl bg-ink p-5 text-on-color">
-        <p className="text-xs font-bold tracking-wide text-[#9da9c4] uppercase">
+      <section className="scc-panel-navy rounded-2xl p-5">
+        <p className="text-xs font-bold tracking-wide text-navy-muted uppercase">
           {openSession ? "Session running" : "Suggested session"}
         </p>
         <div className="mt-2 font-display text-4xl font-bold tabular-nums" aria-live="polite">

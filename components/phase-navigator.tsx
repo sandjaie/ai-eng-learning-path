@@ -23,12 +23,12 @@ export function PhaseNavigator({
             key={phase.id}
             href={`/phase/${phase.id}`}
             className={`grid grid-cols-[24px_1fr] gap-2.5 rounded-[10px] px-2 py-2.5 text-xs leading-snug ${
-              active ? "bg-teal-soft text-teal" : "text-muted hover:bg-card"
+              active ? "bg-teal-soft text-ink" : "text-muted hover:bg-card"
             }`}
           >
             <span
               className={`grid h-[22px] w-[22px] place-items-center rounded-full text-[10px] font-black ${
-                active ? "bg-teal text-on-color" : "bg-line text-ink"
+                active ? "bg-teal text-on-color" : "bg-line text-muted"
               }`}
             >
               {index + 1}
