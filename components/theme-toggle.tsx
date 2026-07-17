@@ -40,7 +40,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       title="Toggle dark mode"
-      className="block-btn px-3 py-1.5 text-xs"
+      className="scc-btn scc-btn-secondary min-h-11 px-3 text-xs"
       aria-label="Toggle dark mode"
     >
       {theme === "dark" ? "☀" : "☾"}

@@ -51,7 +51,7 @@ Local auto-login: `lib/dev-auth.ts` + `app/auth/dev-login/route.ts`. Gated on `N
 ## Migrations & deploys
 
 - Schema changes: `npx supabase migration new <name>` → write SQL in `supabase/migrations/` → apply with `scripts/migrate.sh` (needs `SUPABASE_DB_URL`) or just push to main.
-- `vercel.json` disables Vercel git-triggered builds; only `.github/workflows/deploy.yml` (on push to `main`) deploys: `npm run verify:full` → `supabase db push` → Vercel deploy hook, in that order. Do not "fix" either half; the ordering is the point.
+- Git pushes do NOT auto-deploy (including PR previews) — `vercel.json` sets `git.deploymentEnabled: false`. `.github/workflows/deploy.yml` on `main` runs `npm run verify:full` → `supabase db push` → Vercel deploy hook, in that order. Do not "fix" either half; the ordering is the point.
 - CI gotcha: GitHub runners are IPv4-only. The `SUPABASE_DB_URL` secret must be the **session-pooler** connection string (`…pooler.supabase.com:5432`), never the direct `db.<ref>.supabase.co` host (IPv6-only — connections fail).
 - A database that predates the pipeline needs the one-time "DB baseline" workflow (Actions tab) so `db push` doesn't re-apply the initial migration.
 - `supabase/seed.sql` is a generic sample roadmap (9 phases / 296 items), idempotent. Locally it runs on `supabase start` and may create template user `you@example.com` only. On cloud, apply manually in the SQL editor after Google sign-in (set `seed_email` to `ALLOWED_EMAIL`) — never via CI, and it will not create password users for non-template emails. Local Colima DB ≠ production DB.

@@ -235,9 +235,10 @@ tab — same command, no local credential needed.
    | `VERCEL_DEPLOY_HOOK_URL` | The Deploy Hook URL from step 3 |
 
    This repo ships with `vercel.json` setting
-   `git.deploymentEnabled.main: false`, which disables Vercel's automatic
-   build-on-push for `main`. Deployments to `main` happen only through the
-   Deploy Hook — which the GitHub Actions workflow calls *after* tests pass
+   `git.deploymentEnabled: false`, which disables Vercel's automatic
+   build-on-push for every branch (including PR preview deployments).
+   Production deploys happen only through the Deploy Hook — which the
+   GitHub Actions workflow calls *after* a merge to `main` when tests pass
    and migrations apply, so a broken test or a failed migration blocks the
    deploy instead of racing it.
 5. Push to `main`. The workflow (`.github/workflows/deploy.yml`) runs
